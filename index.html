@@ -1,0 +1,2105 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Bakerzin Food Test Panel</title>
+  
+  <!-- Libraries -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+  <!-- Excel engine is loaded only when an export is requested. -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <!-- URL backend Google Apps Script untuk versi GitHub Pages -->
+  <script src="./config.js"></script>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'], serif: ['Inter', 'sans-serif'] },
+          colors: {
+            brand: { 50: '#EFF9FC', 100: '#DDF2F8', 200: '#BCE5F1', 300: '#8FD2E5', 400: '#55B8D4', 500: '#2596BE', 600: '#1D789A', 700: '#1B627D', 800: '#1B5268', 900: '#193F50', 950: '#0D2834' },
+            slate: { 850: '#151f32' }
+          },
+          animation: { 
+            'float': 'float 8s ease-in-out infinite', 
+            'fade-in': 'fadeIn 0.25s ease-out',
+            'slide-up': 'slideUp 0.32s ease-out',
+            'pulse-soft': 'pulse 4s ease-in-out infinite'
+          },
+          keyframes: {
+            float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-10px)' } },
+            fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+            slideUp: { '0%': { transform: 'translateY(20px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } }
+          },
+          boxShadow: {
+            'soft': '0 10px 28px rgba(24, 33, 45, 0.07)',
+            'glow': '0 0 24px rgba(37, 150, 190, 0.16)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root {
+      --canvas: #F4F7F9;
+      --surface: #FFFFFF;
+      --ink: #18212D;
+      --muted: #657386;
+      --border: #DFE7EC;
+      --primary: #2596BE;
+      --primary-dark: #1D789A;
+      --navy: #101923;
+      --danger: #C3002F;
+    }
+
+    html { background: var(--canvas); }
+    body {
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    }
+    body > .fixed.inset-0 { display: none; }
+    
+    .glass-panel { 
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 28px rgba(24, 33, 45, 0.07);
+    }
+
+    .input-premium {
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .input-premium:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 150, 190, 0.12);
+    }
+    input:disabled, textarea:disabled, select:disabled {
+      background-color: #f8fafc;
+      color: #94a3b8;
+      cursor: not-allowed;
+      border-color: #e2e8f0;
+    }
+
+    input[type=range] { -webkit-appearance: none; background: transparent; width: 100%; }
+    input[type=range]:focus { outline: none; }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 28px; width: 28px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+      margin-top: -12px;
+      cursor: grab;
+      transition: all 0.2s ease;
+    }
+    input[type=range]::-webkit-slider-thumb:active { transform: scale(1.08); border-color: var(--primary); }
+    input[type=range]::-webkit-slider-runnable-track {
+      width: 100%; height: 4px;
+      cursor: pointer;
+      background: #e2e8f0;
+      border-radius: 99px;
+    }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    .loader-line { width: 40px; height: 4px; background: #e2e8f0; overflow: hidden; border-radius: 2px; }
+    .loader-line::after { content: ''; display: block; width: 20px; height: 100%; background: var(--primary); animation: slide 1s infinite ease-in-out alternate; }
+    @keyframes slide { 0% { transform: translateX(0); } 100% { transform: translateX(20px); } }
+
+    .hover-float { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .hover-float:hover { transform: translateY(-2px); }
+    .text-balance { text-wrap: balance; }
+
+    /* Bakerzin command-center system */
+    #app { max-width: 1536px; min-height: 100vh; height: auto; padding: 20px 28px 32px; }
+    #app > nav {
+      top: 12px;
+      margin-bottom: 28px;
+      padding: 12px 16px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.96);
+      box-shadow: 0 6px 20px rgba(24,33,45,.06);
+      backdrop-filter: none;
+    }
+    #app > nav .group > div:first-child {
+      background: var(--primary);
+      border-radius: 10px;
+      box-shadow: none;
+      transform: none;
+    }
+    #app > nav h1 { color: var(--ink); }
+    #app > nav h1 span { font-style: normal; font-weight: 700; }
+    main { justify-content: flex-start; }
+    #view-landing { min-height: calc(100vh - 150px); }
+    #view-landing h2 { max-width: 760px; font-weight: 800; letter-spacing: -.045em; }
+    #view-landing button:first-of-type,
+    #view-admin-login button[onclick="Admin.login()"],
+    #view-panelist-login button,
+    #view-panelist-form button[onclick="Panelist.submitForm()"] {
+      background: var(--primary);
+      box-shadow: 0 8px 18px rgba(37,150,190,.20);
+    }
+    #view-landing button:first-of-type:hover,
+    #view-admin-login button[onclick="Admin.login()"]:hover,
+    #view-panelist-login button:hover,
+    #view-panelist-form button[onclick="Panelist.submitForm()"]:hover { background: var(--primary-dark); }
+    #view-landing .perspective-1000 > div {
+      transform: none;
+      animation: none;
+      padding: 8px;
+      border-radius: 18px;
+      border-color: var(--border);
+      background: white;
+    }
+    #view-landing .perspective-1000 > div > div { border-radius: 13px; }
+
+    #view-admin-login .glass-panel,
+    #view-panelist-login .glass-panel { border-radius: 18px; }
+
+    #view-admin-panel > .flex > .glass-panel {
+      background: var(--navy);
+      border: 0;
+      border-radius: 16px;
+      box-shadow: 0 12px 28px rgba(16,25,35,.15);
+    }
+    #view-admin-panel > .flex > .glass-panel #adminNameDisplay { color: white; }
+    #view-admin-panel > .flex > .glass-panel .nav-item { color: #AAB8C6; }
+    #view-admin-panel > .flex > .glass-panel .nav-item:hover { background: rgba(255,255,255,.07); color: white; box-shadow: none; }
+    #view-admin-panel > .flex > .glass-panel .nav-item.active {
+      background: rgba(37,150,190,.18);
+      color: #E9F8FC;
+      box-shadow: inset 3px 0 0 var(--primary);
+    }
+    #view-admin-panel > .flex > .glass-panel .nav-item.active span { color: white; }
+    #view-admin-panel > .flex > .glass-panel .nav-item.active i { color: #68C4DE; }
+    #view-admin-panel .rounded-\[2rem\],
+    #view-admin-panel .rounded-\[2\.5rem\] { border-radius: 16px; }
+    #view-admin-panel .shadow-soft { box-shadow: 0 8px 22px rgba(24,33,45,.06); }
+    #view-admin-panel h2 { font-weight: 800; letter-spacing: -.025em; }
+    #view-admin-panel input,
+    #view-admin-panel select,
+    #view-admin-panel textarea { min-height: 44px; }
+
+    #view-panelist-menu { max-width: 720px; }
+    #menuGrid > * { border-radius: 16px !important; border-color: var(--border) !important; }
+    #menuGrid button { background: var(--primary); }
+    #view-panelist-form { background: var(--canvas); }
+    #view-panelist-form > div:first-child { height: 34vh; min-height: 240px; max-height: 390px; background: var(--navy); }
+    #view-panelist-form > div:nth-child(2) { background: var(--canvas); border-radius: 22px 22px 0 0; }
+    #view-panelist-form > div:last-child { background: rgba(255,255,255,.97); border-color: var(--border); backdrop-filter: none; }
+    #questionsList > * { border-radius: 16px !important; border: 1px solid var(--border) !important; box-shadow: 0 5px 16px rgba(24,33,45,.05) !important; }
+    button, select, input, textarea { -webkit-tap-highlight-color: transparent; }
+    button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+      outline: 3px solid rgba(37,150,190,.25);
+      outline-offset: 2px;
+    }
+
+    @media (max-width: 1023px) {
+      #view-admin-panel > .flex > .glass-panel {
+        position: sticky;
+        top: 82px;
+        z-index: 35;
+        padding: 10px;
+        gap: 8px;
+      }
+      #view-admin-panel > .flex > .glass-panel > div:nth-child(2) {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 4px;
+      }
+      #view-admin-panel > .flex > .glass-panel .nav-item { justify-content: center; padding: 10px 6px; }
+      #view-admin-panel > .flex > .glass-panel .nav-item span { display: none; }
+      #view-admin-panel > .flex > .glass-panel > div:first-child,
+      #view-admin-panel > .flex > .glass-panel > div:last-child { display: none; }
+    }
+
+    @media (max-width: 640px) {
+      #app { padding: 10px 12px 24px; }
+      #app > nav { top: 8px; margin-bottom: 20px; padding: 10px 12px; }
+      #app > nav h1 { font-size: 16px; }
+      #app > nav .group > div:first-child,
+      #app > nav > button { width: 40px; height: 40px; }
+      #view-landing { min-height: auto; padding: 34px 4px 48px; }
+      #view-landing .lg\:col-span-7 { text-align: left; }
+      #view-landing h2 { font-size: clamp(2.15rem, 11vw, 3.25rem); line-height: 1.08; }
+      #view-landing .space-y-8 > :not([hidden]) ~ :not([hidden]) { margin-top: 1.5rem; }
+      #view-landing button { width: 100%; min-height: 50px; justify-content: center; }
+      #view-admin-login .glass-panel,
+      #view-panelist-login .glass-panel { padding: 28px 20px; border-radius: 16px; }
+      #view-admin-panel { padding-bottom: 24px; }
+      #view-admin-panel > .flex { gap: 16px; }
+      #view-admin-panel > .flex > .glass-panel { top: 70px; border-radius: 14px; }
+      #view-admin-panel .tab-content > .flex:first-child { align-items: stretch; }
+      #view-admin-panel .tab-content h2 { font-size: 1.65rem; }
+      #view-admin-panel .bg-white.p-8,
+      #view-admin-panel .bg-white.md\:p-10,
+      #view-admin-panel .bg-white.p-10 { padding: 20px; }
+      #view-admin-panel table th,
+      #view-admin-panel table td { padding: 14px 16px; white-space: nowrap; }
+      #view-admin-panel #questionActions { flex-wrap: wrap; justify-content: flex-end; }
+      #view-panelist-menu { padding: 8px 0 72px; }
+      #view-panelist-menu > .flex { margin-bottom: 20px; padding: 0 2px; align-items: flex-start; }
+      #view-panelist-menu h2 { font-size: 1.7rem; }
+      #menuGrid > div { gap: 14px; padding: 12px; }
+      #menuGrid > div > div:first-child { width: 92px; height: 92px; border-radius: 12px; }
+      #menuGrid h3 { font-size: 1rem; }
+      #view-panelist-form > div:first-child { height: 29vh; min-height: 210px; }
+      #view-panelist-form #formMenuImg { width: 136px; height: 136px; border-width: 6px; border-radius: 20px 20px 0 0; }
+      #view-panelist-form > div:first-child > div:last-child { padding: 16px; }
+      #view-panelist-form > div:nth-child(2) > div { padding: 26px 16px 140px; }
+      #view-panelist-form > div:nth-child(2) .text-center { margin-bottom: 28px; }
+      #view-panelist-form #formMenuName { font-size: 2rem; }
+      #view-panelist-form > div:last-child { padding: 12px 14px calc(12px + env(safe-area-inset-bottom)); }
+      #view-panelist-form > div:last-child button { min-height: 52px; }
+      #questionsList { gap: 14px; }
+      #questionsList > * { padding: 18px !important; }
+      input, select, textarea { font-size: 16px !important; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col relative overflow-x-hidden overflow-y-auto selection:bg-brand-100 selection:text-brand-900">
+
+  <!-- Abstract Background Elements -->
+  <div class="fixed inset-0 overflow-hidden -z-10 pointer-events-none">
+    <div class="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+    <div class="absolute -top-[10%] -left-[10%] w-[60vw] h-[60vw] bg-brand-50 rounded-full mix-blend-multiply filter blur-[100px] animate-pulse-soft"></div>
+    <div class="absolute top-[30%] -right-[10%] w-[50vw] h-[50vw] bg-yellow-50 rounded-full mix-blend-multiply filter blur-[100px] animate-float"></div>
+  </div>
+
+  <div id="app" class="relative z-10 w-full max-w-[1440px] mx-auto p-6 md:p-10 flex-1 flex flex-col h-screen">
+    
+    <!-- Navbar Premium -->
+    <nav class="flex justify-between items-center mb-10 relative z-50 animate-fade-in bg-white/70 backdrop-blur-lg px-6 py-4 rounded-[2rem] border border-white shadow-soft sticky top-4">
+      <div class="flex items-center gap-3 cursor-default group">
+        <div class="w-10 h-10 bg-gradient-to-br from-brand-600 to-brand-800 text-white rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/20 transform group-hover:rotate-6 transition duration-300">
+          <i class="fas fa-seedling text-sm"></i>
+        </div>
+        <div>
+          <h1 class="font-sans font-bold text-xl text-slate-800 tracking-tight leading-none">Product<span class="font-serif italic font-normal text-brand-600 ml-0.5">Panel</span></h1>
+          <span class="text-[10px] font-bold tracking-[0.2em] uppercase text-slate-400">R&D Intelligence</span>
+        </div>
+      </div>
+      <button onclick="Navigation.goHome()" class="w-10 h-10 rounded-full bg-white border border-slate-200 text-slate-400 hover:text-brand-600 hover:border-brand-200 hover:shadow-md transition-all duration-300 flex items-center justify-center">
+        <i class="fas fa-home"></i>
+      </button>
+    </nav>
+
+    <main class="flex-1 flex flex-col justify-center items-center w-full transition-all duration-300 relative">
+
+      <!-- 1. LANDING PAGE -->
+      <div id="view-landing" class="w-full max-w-6xl grid lg:grid-cols-12 gap-12 lg:gap-24 items-center animate-slide-up">
+        <div class="lg:col-span-7 text-left space-y-8 relative">
+          <div class="inline-flex items-center gap-2 px-3 py-1 bg-white border border-slate-100 rounded-full shadow-sm">
+            <span class="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"></span>
+            <span class="text-[10px] font-bold tracking-widest uppercase text-slate-500">v3.6 Ultimate Edition</span>
+          </div>
+          <h2 id="landingQuote" class="font-serif text-5xl md:text-6xl lg:text-7xl font-medium text-slate-900 leading-[1.1] tracking-tight">
+            Loading Inspiration...
+          </h2>
+          <div class="flex flex-col sm:flex-row gap-4 pt-4">
+            <button onclick="Navigation.toPanelistLogin()" class="group relative bg-slate-900 text-white px-8 py-4 rounded-xl font-medium overflow-hidden shadow-lg shadow-slate-900/10 active:scale-[0.98] transition-all duration-300">
+              <span class="relative flex items-center gap-3">
+                Mulai Tasting <i class="fas fa-arrow-right text-xs group-hover:translate-x-1 transition-transform opacity-70"></i>
+              </span>
+            </button>
+            <button onclick="Navigation.toAdminLogin()" class="px-8 py-4 rounded-xl font-medium text-slate-600 bg-white border border-slate-200 hover:border-slate-300 hover:shadow-sm transition-all active:scale-[0.98]">
+              Dashboard
+            </button>
+          </div>
+        </div>
+        
+        <div class="lg:col-span-5 relative hidden lg:block perspective-1000">
+          <div class="relative bg-white/60 backdrop-blur-xl p-2 rounded-[2rem] shadow-soft border border-white animate-float transform rotate-[-3deg] hover:rotate-0 transition-transform duration-700">
+             <div class="relative rounded-[1.8rem] overflow-hidden bg-white shadow-inner">
+                <img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" class="object-cover w-full h-80 grayscale-[20%] hover:grayscale-0 transition duration-700">
+                <div class="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-black/60 to-transparent text-white">
+                   <p class="font-serif italic text-2xl">Caesar Salad</p>
+                   <div class="flex items-center gap-2 mt-1">
+                      <span class="text-[10px] font-bold uppercase tracking-widest bg-white/20 px-2 py-0.5 rounded backdrop-blur-md">Batch 05</span>
+                      <span class="text-xs">⭐️ 4.8/5</span>
+                   </div>
+                </div>
+             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. LOGIN -->
+      <div id="view-admin-login" class="hidden w-full max-w-sm relative animate-slide-up">
+         <div class="glass-panel p-10 rounded-[2rem] relative overflow-hidden text-center">
+            <div class="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-400 border border-slate-100">
+               <i class="fas fa-lock text-sm"></i>
+            </div>
+            <h2 class="font-serif text-2xl font-bold text-slate-800 mb-1">Admin Access</h2>
+            <p class="text-slate-400 text-xs mb-8">Verifikasi identitas diperlukan.</p>
+            
+            <div class="space-y-4 text-left">
+              <div>
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 ml-1">ID Access</label>
+                <input type="text" id="adminNik" class="w-full px-4 py-3.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/5 transition-all text-sm font-medium outline-none text-slate-800" placeholder="Enter NIK">
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 ml-1">Passcode</label>
+                <input type="password" id="adminPass" class="w-full px-4 py-3.5 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/5 transition-all text-sm font-medium outline-none text-slate-800" placeholder="••••••">
+              </div>
+              <button onclick="Admin.login()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-slate-900/10 active:scale-[0.98] transition-all flex justify-center items-center gap-2 mt-2 text-sm">
+                Masuk System
+              </button>
+            </div>
+         </div>
+      </div>
+
+      <!-- 3. ADMIN DASHBOARD -->
+      <div id="view-admin-panel" class="hidden w-full h-full animate-slide-up pb-10">
+        <div class="flex flex-col lg:flex-row gap-8 h-full">
+          
+          <div class="w-full lg:w-64 glass-panel rounded-[2rem] p-5 h-fit shrink-0 lg:sticky lg:top-24 flex flex-col gap-6">
+            <div class="flex items-center gap-3 px-1 pb-4 border-b border-slate-100/50">
+              <div class="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center font-serif font-bold text-lg shadow-md">A</div>
+              <div class="overflow-hidden">
+                <p class="font-bold text-slate-800 text-sm truncate" id="adminNameDisplay">Chef User</p>
+                <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Logged In</p>
+              </div>
+            </div>
+            
+            <div class="space-y-1 flex-1">
+              <button id="nav-dashboard" onclick="Admin.switchTab('dashboard')" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-slate-500 hover:bg-white hover:text-slate-900 hover:shadow-sm transition-all group active">
+                <i class="fas fa-chart-pie w-5 text-center text-slate-400 group-[.active]:text-brand-600 transition-colors"></i>
+                <span class="group-[.active]:text-slate-900">Overview</span>
+              </button>
+              <button id="nav-manage" onclick="Admin.switchTab('manage')" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-slate-500 hover:bg-white hover:text-slate-900 hover:shadow-sm transition-all group">
+                <i class="fas fa-database w-5 text-center text-slate-400 group-[.active]:text-brand-600 transition-colors"></i>
+                <span class="group-[.active]:text-slate-900">Database</span>
+              </button>
+              <button id="nav-create" onclick="Admin.switchTab('create')" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-slate-500 hover:bg-white hover:text-slate-900 hover:shadow-sm transition-all group">
+                <i class="fas fa-plus-circle w-5 text-center text-slate-400 group-[.active]:text-brand-600 transition-colors"></i>
+                <span class="group-[.active]:text-slate-900">New Session</span>
+              </button>
+              <button id="nav-menu" onclick="Admin.switchTab('menu')" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-slate-500 hover:bg-white hover:text-slate-900 hover:shadow-sm transition-all group">
+                <i class="fas fa-utensils w-5 text-center text-slate-400 group-[.active]:text-brand-600 transition-colors"></i>
+                <span class="group-[.active]:text-slate-900">Menu Editor</span>
+              </button>
+            </div>
+            
+            <div class="mt-auto">
+              <button onclick="Admin.logout()" class="w-full py-3 rounded-xl bg-slate-50 text-red-500 hover:bg-red-50 hover:text-red-600 text-[10px] font-bold uppercase tracking-wider transition border border-transparent hover:border-red-100">Logout</button>
+            </div>
+          </div>
+
+          <div class="flex-1 min-w-0">
+            
+            <!-- DASHBOARD TAB -->
+            <div id="tab-dashboard" class="tab-content space-y-8 animate-fade-in">
+              <div class="flex flex-col md:flex-row justify-between items-end gap-6">
+                <div>
+                  <h2 class="font-serif text-3xl font-bold text-slate-900">Performance</h2>
+                  <p class="text-slate-500 text-sm mt-1">Real-time sensory analysis overview.</p>
+                </div>
+                <div class="flex items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-slate-100 w-full md:w-auto">
+                  <div class="flex items-center gap-2 relative flex-1 md:flex-none">
+                     <div class="relative w-full md:w-48">
+                         <select id="dashProjectSelect" onchange="Admin.loadStats()" class="appearance-none bg-transparent border-none text-xs font-bold text-slate-600 outline-none pl-4 pr-8 py-2 w-full cursor-pointer hover:text-slate-900"><option>Pilih Project...</option></select>
+                         <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-300 pointer-events-none"></i>
+                     </div>
+                     <button onclick="Admin.loadStats()" class="w-8 h-8 rounded-lg bg-slate-50 text-slate-500 hover:text-brand-600 hover:bg-brand-50 transition flex items-center justify-center shrink-0" title="Refresh Data"><i class="fas fa-sync-alt"></i></button>
+                  </div>
+                  
+                  <div class="h-6 w-px bg-slate-100 mx-1"></div>
+                  <label class="flex items-center gap-2 cursor-pointer select-none px-2 group">
+                      <input type="checkbox" id="dashIncludeHidden" onchange="Admin.loadStats()" class="peer w-3.5 h-3.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500/20 cursor-pointer">
+                      <span class="text-[10px] font-bold text-slate-400 peer-checked:text-brand-600 transition uppercase tracking-wide group-hover:text-slate-600">Include Hidden</span>
+                  </label>
+                  
+                  <div class="h-6 w-px bg-slate-100 mx-1"></div>
+                  <div class="flex gap-2">
+                    <button onclick="Admin.downloadExcel()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-emerald-700 transition flex items-center gap-2 shadow-lg shadow-emerald-600/20"><i class="fas fa-file-excel"></i> Excel</button>
+                    <button onclick="Admin.downloadPDF()" class="bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-red-700 transition flex items-center gap-2 shadow-lg shadow-red-600/20"><i class="fas fa-file-pdf"></i> PDF</button>
+                  </div>
+                </div>
+              </div>
+
+              <div id="statsPlaceholder" class="flex flex-col items-center justify-center h-64 border border-dashed border-slate-200 rounded-[2rem] bg-slate-50/50 text-slate-400">
+                <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-3 shadow-sm"><i class="fas fa-chart-simple opacity-30"></i></div>
+                <p class="text-xs font-medium">Pilih Project di atas untuk memuat data</p>
+              </div>
+              
+              <div id="statsResult" class="hidden space-y-6">
+                <!-- KPI -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div class="bg-white p-6 rounded-[1.5rem] border border-slate-100 shadow-soft hover-float">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Total Partisipan</p>
+                    <div class="flex justify-between items-end">
+                       <h3 class="text-4xl font-serif font-bold text-slate-800 leading-none" id="kpiTotal">-</h3>
+                       <div class="w-8 h-8 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center text-xs"><i class="fas fa-users"></i></div>
+                    </div>
+                  </div>
+                  <div class="bg-gradient-to-br from-brand-600 to-brand-800 text-white p-6 rounded-[1.5rem] shadow-lg shadow-brand-500/20 hover-float relative overflow-hidden">
+                    <div class="absolute -right-6 -bottom-6 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
+                    <p class="text-[10px] font-bold text-brand-100 uppercase tracking-widest mb-4 relative z-10">Average NPS</p>
+                    <div class="flex justify-between items-end relative z-10">
+                       <h3 class="text-4xl font-serif font-bold leading-none" id="kpiNps">-</h3>
+                       <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs backdrop-blur-sm"><i class="fas fa-chart-line"></i></div>
+                    </div>
+                  </div>
+                  <div class="bg-white p-6 rounded-[1.5rem] border border-slate-100 shadow-soft hover-float">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Top Performer</p>
+                    <div class="flex justify-between items-end">
+                       <h3 class="text-xl font-serif font-bold text-slate-800 leading-tight line-clamp-1 flex-1 mr-2" id="kpiBest">-</h3>
+                       <div class="w-8 h-8 rounded-full bg-yellow-50 text-yellow-500 flex items-center justify-center text-xs shrink-0"><i class="fas fa-trophy"></i></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- CHART -->
+                <div class="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-soft">
+                  <div class="flex justify-between items-center mb-6">
+                     <h4 class="font-bold text-slate-800 text-sm">NPS Score Distribution</h4>
+                  </div>
+                  <div class="h-72 w-full"><canvas id="npsChart"></canvas></div>
+                  
+                  <!-- LEGEND (Updated) -->
+                  <div class="mt-6 pt-6 border-t border-slate-50 flex flex-wrap justify-center gap-6 text-[10px] font-bold text-slate-500 uppercase tracking-wide">
+                     <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-400"></span> Drop (&lt; 35)</span>
+                     <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-yellow-400"></span> Revisi Minor (35 - 39)</span>
+                     <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-brand-500"></span> Launch (&ge; 40)</span>
+                  </div>
+                </div>
+
+                <!-- LEADERBOARD -->
+                <div class="space-y-4">
+                  <div class="flex items-center gap-2 mb-2 ml-1">
+                     <div class="w-1 h-4 bg-brand-500 rounded-full"></div>
+                     <h4 class="font-bold text-slate-800 text-lg">Detailed Insights</h4>
+                  </div>
+                  <div id="rankingList" class="grid gap-4"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- MANAGE TAB -->
+            <div id="tab-manage" class="tab-content hidden animate-fade-in">
+              <div class="flex justify-between items-center mb-8">
+                <div>
+                   <h2 class="font-serif text-3xl font-bold text-slate-900">Database</h2>
+                   <p class="text-slate-500 text-sm mt-1">Manage projects & menu items.</p>
+                </div>
+                <button onclick="Admin.loadManageData()" class="w-10 h-10 rounded-full bg-white border border-slate-200 text-slate-500 hover:text-brand-600 hover:border-brand-300 hover:shadow-md transition flex items-center justify-center shadow-sm"><i class="fas fa-sync-alt"></i></button>
+              </div>
+              
+              <div class="space-y-8">
+                <!-- Tabel Projects Premium -->
+                <div class="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
+                  <div class="px-8 py-5 border-b border-slate-200 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white">
+                    <h3 class="font-bold text-slate-800 text-base tracking-wide flex items-center gap-2"><i class="fas fa-folder-open text-brand-500"></i> Active Projects</h3>
+                  </div>
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                      <thead class="text-xs text-slate-500 uppercase bg-slate-100/80 font-extrabold tracking-wider border-b border-slate-200">
+                        <tr><th class="px-8 py-5">Project Name</th><th class="px-8 py-5">Created</th><th class="px-8 py-5">Status</th><th class="px-8 py-5 text-right">Action</th></tr>
+                      </thead>
+                      <tbody id="manageProjectList" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- Tabel Menus Premium -->
+                <div class="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
+                  <div class="px-8 py-5 border-b border-slate-200 flex flex-col sm:flex-row justify-between gap-4 bg-gradient-to-r from-slate-50 to-white items-center">
+                    <h3 class="font-bold text-slate-800 text-base tracking-wide flex items-center gap-2"><i class="fas fa-utensils text-brand-500"></i> Registered Menus</h3>
+                    <div class="flex items-center gap-2">
+                        <div class="relative shadow-sm rounded-lg">
+                          <select id="manageMenuProjectSelect" onchange="Admin.renderManageMenus()" class="appearance-none bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 outline-none pl-4 pr-8 py-2.5 cursor-pointer hover:border-brand-400 hover:text-brand-600 transition"><option>Pilih Project...</option></select>
+                          <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none"></i>
+                        </div>
+                        <button onclick="Admin.renderManageMenus()" class="w-9 h-9 rounded-lg bg-white border border-slate-200 text-slate-500 hover:text-brand-600 hover:border-brand-300 hover:shadow-sm transition flex items-center justify-center" title="Refresh Menus"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                  </div>
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                      <thead class="text-xs text-slate-500 uppercase bg-slate-100/80 font-extrabold tracking-wider border-b border-slate-200">
+                        <tr><th class="px-8 py-5">Menu Item</th><th class="px-8 py-5">Visibility</th><th class="px-8 py-5 text-right">Action</th></tr>
+                      </thead>
+                      <tbody id="manageMenuList" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- CREATE TAB -->
+            <div id="tab-create" class="tab-content hidden animate-fade-in">
+              <div class="flex justify-center items-center h-full min-h-[60vh]">
+                <div class="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-soft max-w-lg w-full text-center relative overflow-hidden">
+                  <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-brand-500 to-transparent opacity-50"></div>
+                  <div class="w-16 h-16 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mx-auto mb-6 text-2xl shadow-sm"><i class="fas fa-flask"></i></div>
+                  <h2 class="font-serif text-3xl font-bold text-slate-900 mb-2">Start Session</h2>
+                  <p class="text-slate-500 mb-10 text-sm leading-relaxed px-4">Buat folder project baru untuk mengorganisir sesi tasting hari ini.</p>
+                  
+                  <div class="text-left space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1.5 ml-1">Project Name</label>
+                        <input id="newProjectName" class="w-full px-5 py-4 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/5 transition-all text-slate-800 font-medium outline-none placeholder-slate-300" placeholder="e.g. Batch 5 - Pastry">
+                    </div>
+                    <button onclick="Admin.createProject()" class="w-full bg-slate-900 text-white font-bold py-4 rounded-xl hover:bg-slate-800 transition shadow-lg shadow-slate-900/10 active:scale-95 text-sm">Create Project</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- MENU FORM TAB -->
+            <div id="tab-menu" class="tab-content hidden animate-fade-in">
+              <div class="max-w-4xl mx-auto">
+                 <div class="flex justify-between items-center mb-8">
+                    <div>
+                      <h2 class="font-serif text-3xl font-bold text-slate-900" id="formMenuTitle">Menu Editor</h2>
+                      <p class="text-slate-500 text-sm mt-1">Setup menu details & questions.</p>
+                    </div>
+                    <div class="flex gap-2">
+                       <button id="btnBackToManage" onclick="Admin.switchTab('manage')" class="hidden text-xs font-bold text-slate-500 bg-white border border-slate-200 px-4 py-2.5 rounded-xl hover:bg-slate-50 hover:text-slate-800 transition items-center gap-2"><i class="fas fa-arrow-left"></i> Back to List</button>
+                       <button id="btnResetMenu" onclick="Admin.resetMenuForm()" class="text-xs font-bold text-brand-600 bg-brand-50 border border-brand-100 px-4 py-2.5 rounded-xl hover:bg-brand-100 transition flex items-center gap-2"><i class="fas fa-plus"></i> Reset New</button>
+                    </div>
+                 </div>
+                
+                <div class="bg-white p-8 md:p-10 rounded-[2.5rem] border border-slate-100 shadow-soft relative">
+                  <div class="grid md:grid-cols-12 gap-10">
+                    <div class="md:col-span-5 space-y-6">
+                      <input type="hidden" id="editMenuId"><input type="hidden" id="isEditMode" value="false">
+                      
+                      <div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1.5 ml-1">Assign Project</label>
+                        <div class="relative">
+                            <select id="menuProjectSelect" class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/5 outline-none appearance-none text-sm font-medium text-slate-700"><option>Loading...</option></select>
+                            <i class="fas fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 text-xs pointer-events-none"></i>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1.5 ml-1">Menu Visibility</label>
+                        <div class="relative">
+                            <select id="menuStatusSelect" class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/5 outline-none appearance-none text-sm font-bold text-slate-700">
+                                <option value="Active">Tampilkan ke Panelis (Active)</option>
+                                <option value="Hidden" class="text-red-500">Sembunyikan (Hidden)</option>
+                            </select>
+                            <i class="fas fa-eye absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 text-xs pointer-events-none"></i>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1.5 ml-1">Menu Name</label>
+                        <input id="menuName" class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/5 outline-none transition text-sm font-medium" placeholder="Nama Menu">
+                      </div>
+
+                      <div class="relative group" id="photoUploadContainer">
+                        <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1.5 ml-1">Menu Photo</label>
+                        <input type="file" id="menuFile" class="hidden" onchange="Admin.handleFileSelect(this)">
+                        
+                        <label id="uploadPlaceholder" for="menuFile" class="flex flex-col items-center justify-center gap-3 w-full h-40 rounded-2xl border-2 border-dashed border-slate-200 cursor-pointer hover:bg-slate-50 hover:border-brand-400 transition group-hover:text-brand-600">
+                           <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-brand-50 group-hover:text-brand-500 transition"><i class="fas fa-camera"></i></div>
+                           <span id="fileName" class="text-xs font-bold text-slate-400">Upload JPG</span>
+                        </label>
+
+                         <div id="imagePreviewContainer" class="hidden relative w-full h-48 rounded-2xl overflow-hidden shadow-sm border border-slate-200 group-hover:shadow-md transition">
+                            <img id="menuImgPreview" class="w-full h-full object-cover">
+                            <label for="menuFile" class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer text-white font-bold text-xs">
+                                <i class="fas fa-edit mr-2"></i> Ganti Foto
+                            </label>
+                         </div>
+                        <p id="editPhotoNote" class="hidden text-[10px] text-blue-500 mt-2 text-center">*Foto opsional saat edit</p>
+                      </div>
+                    </div>
+
+                    <div class="md:col-span-7 space-y-6">
+                       <div>
+                         <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1.5 ml-1">Description</label>
+                         <textarea id="menuDesc" class="w-full h-32 px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/5 outline-none resize-none transition text-sm leading-relaxed" placeholder="Deskripsi singkat menu..."></textarea>
+                       </div>
+
+                       <div class="bg-slate-50/50 rounded-2xl p-6 border border-slate-100 relative min-h-[300px]">
+                          <div id="questionsWrapper">
+                              <div class="flex justify-between items-center mb-5">
+                                <label class="text-xs font-bold uppercase text-slate-500 tracking-wider">Form Questions</label>
+                                <div class="flex gap-2" id="questionActions">
+                                  <button onclick="Admin.addQ('rating')" class="text-[10px] font-bold bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg shadow-sm hover:text-brand-600 hover:border-brand-200 transition">+ Rating</button>
+                                  <button onclick="Admin.addQ('text')" class="text-[10px] font-bold bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg shadow-sm hover:text-blue-600 hover:border-blue-200 transition">+ Teks</button>
+                                  <button onclick="Admin.addQ('currency')" class="text-[10px] font-bold bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg shadow-sm hover:text-yellow-600 hover:border-yellow-200 transition">+ Harga</button>
+                                  <button onclick="Admin.addQ('options')" class="text-[10px] font-bold bg-white border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg shadow-sm hover:text-purple-600 hover:border-purple-200 transition">+ Pilihan</button>
+                                </div>
+                              </div>
+                              <div id="questionsContainer" class="space-y-3 min-h-[50px]"></div>
+                          </div>
+                          
+                          <div id="npsWrapper" class="hidden h-full flex flex-col justify-center items-center text-center p-4">
+                              <div class="mb-2 text-6xl font-serif font-bold text-brand-600" id="viewNpsScore">-</div>
+                              <p class="text-xs font-bold uppercase text-slate-400 tracking-widest mb-4">NPS Score (Average)</p>
+                              
+                              <div class="flex gap-3 text-[10px] font-medium text-slate-500">
+                                  <span class="bg-green-100 text-green-700 px-3 py-1 rounded-lg" id="viewNpsPromoters">Prom: 0</span>
+                                  <span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-lg" id="viewNpsPassives">Pass: 0</span>
+                                  <span class="bg-red-100 text-red-700 px-3 py-1 rounded-lg" id="viewNpsDetractors">Detr: 0</span>
+                              </div>
+                              <p class="mt-4 text-[10px] italic text-slate-400" id="viewNpsTotal">Total Responden: 0</p>
+                          </div>
+                       </div>
+                    </div>
+                  </div>
+
+                  <div class="mt-10 pt-8 border-t border-slate-100">
+                    <button onclick="Admin.saveMenu()" id="btnSaveMenu" class="w-full bg-brand-600 text-white font-bold text-sm py-4 rounded-xl shadow-lg shadow-brand-500/20 hover:bg-brand-700 hover:shadow-xl transition active:scale-[0.99] tracking-wide uppercase">
+                      Simpan Database Menu
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. PANELIST VIEW -->
+      <div id="view-panelist-login" class="hidden w-full max-w-sm relative animate-slide-up">
+        <div class="glass-panel p-8 rounded-[2.5rem] text-center border border-white/50">
+           <div class="mb-10 mt-4">
+             <div class="w-16 h-16 bg-slate-900 rounded-2xl rotate-3 flex items-center justify-center text-white text-2xl mx-auto mb-6 shadow-xl shadow-slate-900/20">👋</div>
+             <h1 class="font-serif text-3xl font-bold text-slate-800">Hi, Taster!</h1>
+             <p class="text-slate-400 text-sm mt-2">Siap untuk petualangan rasa hari ini?</p>
+           </div>
+           <div class="space-y-4">
+             <div class="relative">
+                 <select id="panelistName" class="w-full px-6 py-4 rounded-2xl bg-white border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-100 outline-none appearance-none text-center font-bold text-slate-800 shadow-sm text-lg">
+                    <option value="" disabled selected>Pilih Rentang Umur</option>
+                    <option value="10 - 18">10 - 18 Tahun</option>
+                    <option value="19 - 24">19 - 24 Tahun</option>
+                    <option value="25 - 34">25 - 34 Tahun</option>
+                    <option value="35 - 44">35 - 44 Tahun</option>
+                    <option value="45 - 54">45 - 54 Tahun</option>
+                    <option value="55 - 64">55 - 64 Tahun</option>
+                    <option value=">=65">>= 65 Tahun</option>
+                 </select>
+                 <i class="fas fa-chevron-down absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none"></i>
+             </div>
+             
+             <div class="relative">
+               <select id="panelistProjectSelect" class="w-full px-6 py-4 rounded-2xl bg-white border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-100 outline-none appearance-none text-center font-medium text-slate-600 shadow-sm text-sm"><option>Loading Projects...</option></select>
+               <i class="fas fa-chevron-down absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none"></i>
+             </div>
+
+             <button onclick="Panelist.start()" class="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl shadow-xl shadow-slate-900/20 active:scale-95 transition-all mt-4 hover:bg-black text-sm uppercase tracking-widest">
+               Start Session
+             </button>
+           </div>
+        </div>
+      </div>
+
+      <div id="view-panelist-menu" class="hidden w-full max-w-md animate-slide-up pb-24">
+        <div class="flex justify-between items-center mb-8 px-2">
+          <div>
+             <h2 class="font-serif text-3xl font-bold text-slate-900">Menu List</h2>
+             <p class="text-xs text-slate-400 mt-1 font-medium">Pilih menu untuk dinilai</p>
+          </div>
+          <div class="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm border border-slate-100">
+             <div class="w-2 h-2 rounded-full bg-brand-500 animate-pulse"></div>
+             <div class="text-xs font-bold text-slate-700" id="panelistInfo">User</div>
+          </div>
+        </div>
+        <div id="menuGrid" class="space-y-4"></div>
+      </div>
+
+      <div id="view-panelist-form" class="hidden fixed inset-0 z-[60] bg-[#F4F7F9] flex flex-col">
+        <div class="relative w-full h-[40vh] bg-slate-900 shrink-0 overflow-hidden shadow-2xl">
+          <img id="formMenuImgBg" class="absolute inset-0 w-full h-full object-cover opacity-40 blur-2xl scale-110">
+          <div class="absolute inset-0 bg-gradient-to-t from-[#F4F7F9] via-transparent to-black/40"></div>
+          
+          <img id="formMenuImg" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-48 h-48 object-cover rounded-t-[2.5rem] shadow-[0_-20px_60px_-10px_rgba(0,0,0,0.4)] border-8 border-[#F4F7F9] border-b-0 translate-y-2">
+
+          <div class="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-20">
+            <button onclick="Navigation.backToMenu()" class="text-white bg-white/10 backdrop-blur-md border border-white/20 rounded-full w-12 h-12 flex items-center justify-center hover:bg-white hover:text-slate-900 transition-all shadow-lg active:scale-90"><i class="fas fa-arrow-left"></i></button>
+          </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto -mt-2 relative z-10 bg-[#F4F7F9] rounded-t-[3rem]">
+          <div class="max-w-xl mx-auto px-6 py-10 pb-48"> 
+            <div class="text-center mb-12">
+               <span class="inline-block px-4 py-1.5 bg-brand-50 text-brand-700 text-[10px] font-bold uppercase tracking-widest rounded-full mb-4 border border-brand-100">Tasting Item</span>
+               <h2 id="formMenuName" class="font-serif text-4xl font-bold text-slate-900 leading-tight mb-4"></h2>
+               <p id="formMenuDesc" class="text-slate-500 text-sm leading-relaxed max-w-xs mx-auto font-medium"></p>
+            </div>
+            <div id="questionsList" class="space-y-6"></div>
+          </div>
+        </div>
+
+        <div class="fixed bottom-0 left-0 w-full p-6 bg-white/90 backdrop-blur-xl border-t border-slate-100 z-50">
+          <div class="max-w-xl mx-auto">
+            <button id="panelistSubmitButton" onclick="Panelist.submitForm()" class="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl shadow-lg shadow-slate-900/20 active:scale-95 transition-all flex justify-center items-center gap-3 text-sm tracking-widest uppercase hover:bg-black group disabled:opacity-60 disabled:cursor-not-allowed">
+              <span>Kirim Penilaian</span> 
+              <span class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center group-hover:translate-x-1 transition"><i class="fas fa-paper-plane text-xs"></i></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Global Loader -->
+    <div id="loadingOverlay" class="hidden fixed inset-0 bg-white/90 backdrop-blur-sm z-[100] flex flex-col items-center justify-center transition-opacity duration-300">
+      <div class="loader-line mb-4"></div>
+      <p id="loadingText" class="text-slate-400 font-bold text-[10px] tracking-[0.3em] uppercase animate-pulse">Processing</p>
+    </div>
+
+  </div>
+
+  <script>
+    /*
+     * Adapter GitHub Pages -> Google Apps Script.
+     * Di dalam Apps Script, aplikasi tetap memakai google.script.run bawaan.
+     */
+    (function installAppsScriptBridge() {
+      window.google = window.google || {};
+      google.script = google.script || {};
+      if (google.script.run) return;
+
+      const apiUrl = String((window.APP_CONFIG && window.APP_CONFIG.API_URL) || '').trim();
+
+      async function callApi(action, args) {
+        if (!apiUrl || apiUrl.includes('PASTE_APPS_SCRIPT')) {
+          throw new Error('Backend belum dikonfigurasi. Isi API_URL pada config.js dengan URL Web App Google Apps Script.');
+        }
+
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          redirect: 'follow',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: action,
+            args: args,
+            authToken: sessionStorage.getItem('food_test_admin_token') || ''
+          })
+        });
+
+        const raw = await response.text();
+        let payload;
+        try {
+          payload = JSON.parse(raw);
+        } catch (error) {
+          throw new Error('Respons backend tidak valid. Pastikan deployment memakai akses Anyone dan URL /exec, bukan /dev.');
+        }
+
+        if (!response.ok || !payload.ok) {
+          throw new Error(payload.error || ('HTTP ' + response.status));
+        }
+        return payload.result;
+      }
+
+      function createRunner(successHandler, failureHandler) {
+        return new Proxy({}, {
+          get: function(_target, property) {
+            if (property === 'withSuccessHandler') {
+              return function(handler) { return createRunner(handler, failureHandler); };
+            }
+            if (property === 'withFailureHandler') {
+              return function(handler) { return createRunner(successHandler, handler); };
+            }
+            return function() {
+              const args = Array.from(arguments);
+              callApi(String(property), args)
+                .then(function(result) { if (successHandler) successHandler(result); })
+                .catch(function(error) {
+                  if (failureHandler) failureHandler(error);
+                  else {
+                    showLoading(false);
+                    console.error(error);
+                    if (window.Swal) Swal.fire({ icon: 'error', title: 'Connection Error', text: error.message });
+                  }
+                });
+            };
+          }
+        });
+      }
+
+      google.script.run = createRunner(null, null);
+    })();
+
+    const showLoading = (s, t) => { if(t)document.getElementById('loadingText').innerText=t; document.getElementById('loadingOverlay').classList.toggle('hidden',!s); };
+    const loadScriptOnce = (src, globalName) => {
+      if (globalName && window[globalName]) return Promise.resolve(window[globalName]);
+      return new Promise((resolve, reject) => {
+        const existing = document.querySelector(`script[data-dynamic-src="${src}"]`);
+        if (existing) {
+          existing.addEventListener('load', () => resolve(globalName ? window[globalName] : true), { once: true });
+          existing.addEventListener('error', reject, { once: true });
+          return;
+        }
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.dataset.dynamicSrc = src;
+        script.onload = () => resolve(globalName ? window[globalName] : true);
+        script.onerror = () => reject(new Error('Gagal memuat modul pendukung.'));
+        document.head.appendChild(script);
+      });
+    };
+    Chart.register(ChartDataLabels);
+
+    const Navigation = {
+      views: ['landing', 'admin-login', 'admin-panel', 'panelist-login', 'panelist-menu', 'panelist-form'],
+      currentView: 'landing',
+      show(id, options = {}) {
+        if (!this.views.includes(id)) return;
+        document.querySelectorAll('[id^="view-"]').forEach(e => e.classList.add('hidden')); 
+        const el = document.getElementById(`view-${id}`);
+        if (!el) return;
+        el.classList.remove('hidden');
+        el.classList.add('animate-slide-up');
+        this.currentView = id;
+
+        if (options.history !== false) {
+          const state = { foodTestApp: true, view: id };
+          if (options.tab) state.tab = options.tab;
+          const current = window.history.state || {};
+          const isSameState = current.foodTestApp && current.view === state.view && (current.tab || '') === (state.tab || '');
+          if (!isSameState) {
+            const method = options.replace ? 'replaceState' : 'pushState';
+            window.history[method](state, document.title);
+          }
+        }
+      },
+      initHistory() {
+        window.history.replaceState({ foodTestGuard: true }, document.title);
+        window.history.pushState({ foodTestApp: true, view: 'landing', root: true }, document.title);
+        window.addEventListener('popstate', event => this.handlePopState(event));
+      },
+      handlePopState(event) {
+        const state = event.state || {};
+        if (state.foodTestGuard) {
+          window.history.pushState({ foodTestApp: true, view: 'landing', root: true }, document.title);
+          this.show('landing', { history: false });
+          if (window.Swal) Swal.fire({toast:true,position:'bottom',icon:'info',title:'Anda sudah di halaman utama',showConfirmButton:false,timer:1200});
+          return;
+        }
+        if (!state.foodTestApp || !state.view) return;
+        if (state.view === 'admin-panel' && !Admin.role) {
+          window.history.replaceState({ foodTestApp: true, view: 'admin-login' }, document.title);
+          this.show('admin-login', { history: false });
+          return;
+        }
+        this.show(state.view, { history: false });
+        if (state.view === 'admin-panel') Admin.switchTab(state.tab || 'dashboard', false);
+      },
+      goHome() { this.show('landing'); }, toAdminLogin() { this.show('admin-login'); },
+      toPanelistLogin() {
+        showLoading(true, 'Connecting...');
+        google.script.run.withSuccessHandler(list => {
+          showLoading(false); const sel = document.getElementById('panelistProjectSelect'); 
+          sel.innerHTML='<option value="">Pilih Project...</option>' + list.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+          Navigation.show('panelist-login');
+        }).withFailureHandler(() => {
+            showLoading(false);
+            Swal.fire({icon:'error', title:'Connection Error', text:'Gagal memuat project.'});
+        }).getActiveProjects();
+      },
+      backToMenu() {
+        const state = window.history.state || {};
+        if (state.foodTestApp && state.view === 'panelist-form') window.history.back();
+        else this.show('panelist-menu');
+      }
+    };
+
+    const Admin = {
+      data: null, useFallback: false, role: '', dataLoadedAt: 0, dataDirty: true,
+      menuSortable: null, isSavingOrder: false,
+      login() {
+        const n=document.getElementById('adminNik').value, p=document.getElementById('adminPass').value;
+        showLoading(true,'Verifying...'); 
+        google.script.run.withSuccessHandler(r=>{ 
+            showLoading(false); 
+            if(r.success){ 
+                this.role = r.role || 'Admin';
+                if (r.token) sessionStorage.setItem('food_test_admin_token', r.token);
+                document.getElementById('adminNameDisplay').innerText = r.name + ' (' + this.role + ')';
+                
+                if (this.role === 'Admin') {
+                    document.getElementById('nav-create').classList.add('hidden');
+                    document.getElementById('nav-menu').classList.add('hidden');
+                } else {
+                    document.getElementById('nav-create').classList.remove('hidden');
+                    document.getElementById('nav-menu').classList.remove('hidden');
+                }
+
+                Navigation.show('admin-panel', {tab:'dashboard'}); 
+                this.switchTab('dashboard', false); 
+            } else { 
+                Swal.fire({icon:'error',title:'Access Denied'}); 
+            } 
+        }).loginAdmin(n,p);
+      },
+      logout() {
+        document.getElementById('adminNik').value = '';
+        document.getElementById('adminPass').value = '';
+        this.data = null; 
+        this.role = '';
+        this.dataLoadedAt = 0;
+        this.dataDirty = true;
+        sessionStorage.removeItem('food_test_admin_token');
+        Navigation.show('landing', {replace:true});
+      },
+      goToMenuEditor() {
+        this.resetMenuForm();
+        this.switchTab('menu');
+      },
+      switchTab(t, recordHistory = true) {
+        document.querySelectorAll('.tab-content').forEach(e=>e.classList.add('hidden')); document.getElementById(`tab-${t}`).classList.remove('hidden');
+        document.querySelectorAll('.nav-item').forEach(e=>e.classList.remove('active'));
+        
+        const targetId = t === 'menu' ? 'nav-menu' : `nav-${t}`;
+        const navEl = document.getElementById(targetId);
+        if(navEl) navEl.classList.add('active');
+
+        if (recordHistory && Navigation.currentView === 'admin-panel') {
+          const current = window.history.state || {};
+          if (!current.foodTestApp || current.view !== 'admin-panel' || current.tab !== t) {
+            window.history.pushState({foodTestApp:true, view:'admin-panel', tab:t}, document.title);
+          }
+        }
+
+        if(t==='manage'||t==='menu'||t==='dashboard') this.loadData();
+      },
+      invalidateData() {
+        this.dataDirty = true;
+      },
+      loadData(force = false) {
+        if (!force && this.data && !this.dataDirty && (Date.now() - this.dataLoadedAt) < 120000) {
+          this.process(this.data);
+          this.refreshVisibleDataView();
+          return;
+        }
+        showLoading(true, 'Syncing...');
+        google.script.run.withSuccessHandler(d => {
+          showLoading(false);
+          if(!d||!d.projects){ this.useFallback=true; this.loadFallback(); return; }
+          this.useFallback=false;
+          this.dataLoadedAt = Date.now();
+          this.dataDirty = false;
+          this.process(d);
+          this.refreshVisibleDataView();
+        }).withFailureHandler(()=>{ this.useFallback=true; this.loadFallback(); }).getAdminMasterData();
+      },
+      refreshVisibleDataView() {
+        const manageTab = document.getElementById('tab-manage');
+        if (manageTab && !manageTab.classList.contains('hidden')) {
+          this.renderManageMenus();
+        }
+      },
+      loadFallback() { 
+          google.script.run.withSuccessHandler(l => { 
+              showLoading(false); 
+              this.process({ projects:l.map(p=>({id:p.id,name:p.name,date:'-',status:'Active'})), menus:[], rawResponses: [] }); 
+              this.refreshVisibleDataView();
+          }).getActiveProjects(); 
+      },
+      process(d) {
+        this.data = d;
+        const list = document.getElementById('manageProjectList');
+        list.innerHTML = d.projects.map(p => {
+            const actionHtml = this.role === 'Admin' ? '<span class="text-slate-400 text-xs italic">View Only</span>' : `<button onclick="Admin.editP('${encodeURIComponent(JSON.stringify(p))}')" class="text-blue-600 bg-blue-50 border border-blue-100 font-bold text-xs hover:bg-blue-100 hover:text-blue-700 px-3 py-2 rounded-lg transition shadow-sm"><i class="fas fa-edit mr-1"></i> Edit</button>`;
+            return `<tr class="hover:bg-slate-50/80 transition-colors group"><td class="px-8 py-5"><div class="font-bold text-slate-800 text-sm">${p.name}</div><div class="text-[10px] text-slate-400 font-mono mt-0.5">ID: ${p.id}</div></td><td class="px-8 py-5 text-slate-500 font-medium text-xs">${p.date}</td><td class="px-8 py-5"><span class="px-3 py-1.5 rounded-lg text-[10px] bg-slate-100 border border-slate-200 text-slate-600 font-bold uppercase tracking-wide group-hover:border-brand-300 group-hover:text-brand-700 group-hover:bg-brand-50 transition-all">${p.status}</span></td><td class="px-8 py-5 text-right">${actionHtml}</td></tr>`;
+        }).join('');
+        
+        const fill = (id) => { 
+            const el=document.getElementById(id); 
+            const pendingVal = el.getAttribute('data-value') || el.value;
+            el.innerHTML='<option value="">Pilih Project...</option>' + d.projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+            if(pendingVal) el.value = pendingVal;
+            el.removeAttribute('data-value');
+        };
+        fill('menuProjectSelect'); fill('dashProjectSelect'); fill('manageMenuProjectSelect');
+      },
+      renderManageMenus() {
+        const pid = document.getElementById('manageMenuProjectSelect').value; const list = document.getElementById('manageMenuList'); list.innerHTML='';
+        const menus = this.data.menus.filter(m=>m.projectId===pid).sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0));
+
+        if (this.menuSortable) {
+          this.menuSortable.destroy();
+          this.menuSortable = null;
+        }
+
+        if(!menus.length) {
+          list.innerHTML='<tr><td colspan="3" class="p-8 text-center text-slate-400 italic">No menus found in this project.</td></tr>';
+          return;
+        }
+
+        list.innerHTML = menus.map(m => {
+             const qs = typeof m.questions==='object'?JSON.stringify(m.questions):m.questions; m.questions=qs;
+             const isHidden = m.status === 'Hidden';
+             const statusBadge = isHidden ? 
+                `<span class="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-[10px] font-bold uppercase w-fit border border-red-100"><i class="fas fa-eye-slash"></i> Hidden</span>` : 
+                `<span class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-bold uppercase w-fit border border-emerald-100"><i class="fas fa-check"></i> Active</span>`;
+
+             let actionHtml = `<button onclick="Admin.viewM('${encodeURIComponent(JSON.stringify(m))}')" class="text-slate-600 bg-white border border-slate-200 shadow-sm font-bold text-xs hover:bg-slate-50 hover:text-slate-900 px-3 py-2 rounded-lg transition mr-1.5" title="View Details"><i class="fas fa-eye mr-1"></i> View</button>`;
+             
+             if (this.role !== 'Admin') {
+                actionHtml += `<button onclick="Admin.copyM('${encodeURIComponent(JSON.stringify(m))}')" class="text-purple-600 bg-purple-50 border border-purple-100 shadow-sm font-bold text-xs hover:bg-purple-100 hover:text-purple-700 px-3 py-2 rounded-lg transition mr-1.5" title="Duplicate"><i class="fas fa-copy mr-1"></i> Copy</button>`;
+                actionHtml += `<button onclick="Admin.editM('${encodeURIComponent(JSON.stringify(m))}')" class="text-brand-600 bg-brand-50 border border-brand-100 shadow-sm font-bold text-xs hover:bg-brand-100 hover:text-brand-700 px-3 py-2 rounded-lg transition" title="Edit Data"><i class="fas fa-edit mr-1"></i> Edit</button>`;
+             }
+             const dragHandle = this.role !== 'Admin' ? `<button type="button" class="menu-drag-handle w-9 h-9 shrink-0 rounded-lg border border-slate-200 bg-slate-50 text-slate-400 hover:text-brand-600 hover:border-brand-300 hover:bg-brand-50 cursor-grab active:cursor-grabbing touch-none transition" title="Geser urutan menu" aria-label="Geser urutan ${m.name}"><i class="fas fa-grip-vertical"></i></button>` : '';
+             return `<tr data-menu-id="${m.id}" class="menu-sort-row hover:bg-slate-50/80 transition-colors group"><td class="px-8 py-5"><div class="flex items-center gap-4">${dragHandle}<div class="min-w-0"><div class="font-bold text-slate-800 text-sm">${m.name}</div><div class="text-[11px] text-slate-500 font-normal mt-1 max-w-sm leading-relaxed truncate">${m.desc}</div></div></div></td><td class="px-8 py-5">${statusBadge}</td><td class="px-8 py-5 text-right whitespace-nowrap">${actionHtml}</td></tr>`;
+          }).join('');
+        this.initMenuSortable(pid);
+      },
+      async initMenuSortable(projectId) {
+        if (this.role === 'Admin' || !projectId) return;
+        const list = document.getElementById('manageMenuList');
+        if (!list || list.querySelectorAll('tr[data-menu-id]').length < 2) return;
+        try {
+          await loadScriptOnce('https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js', 'Sortable');
+          if (this.menuSortable) this.menuSortable.destroy();
+          this.menuSortable = Sortable.create(list, {
+            handle: '.menu-drag-handle',
+            animation: 180,
+            forceFallback: true,
+            fallbackTolerance: 4,
+            delayOnTouchOnly: true,
+            delay: 120,
+            touchStartThreshold: 3,
+            ghostClass: 'opacity-30',
+            chosenClass: 'bg-brand-50',
+            dragClass: 'shadow-xl',
+            onEnd: event => {
+              if (event.oldIndex !== event.newIndex) this.saveMenuOrder(projectId);
+            }
+          });
+        } catch (error) {
+          console.error('Sortable gagal dimuat:', error);
+        }
+      },
+      saveMenuOrder(projectId) {
+        if (this.isSavingOrder) return;
+        const list = document.getElementById('manageMenuList');
+        const orderedIds = Array.from(list.querySelectorAll('tr[data-menu-id]')).map(row => row.dataset.menuId);
+        if (!orderedIds.length) return;
+
+        this.isSavingOrder = true;
+        if (this.menuSortable) this.menuSortable.option('disabled', true);
+        google.script.run.withSuccessHandler(result => {
+          this.isSavingOrder = false;
+          if (this.menuSortable) this.menuSortable.option('disabled', false);
+          if (!result || result.success === false) {
+            return this.handleMenuOrderError(projectId, result && result.message);
+          }
+          const orderMap = new Map(orderedIds.map((id, index) => [String(id), index + 1]));
+          this.data.menus.forEach(menu => {
+            if (String(menu.projectId) === String(projectId) && orderMap.has(String(menu.id))) menu.order = orderMap.get(String(menu.id));
+          });
+          Swal.fire({toast:true,position:'top-end',icon:'success',title:'Urutan menu tersimpan',showConfirmButton:false,timer:1400});
+        }).withFailureHandler(error => {
+          this.isSavingOrder = false;
+          this.handleMenuOrderError(projectId, error.message);
+        }).reorderMenus(projectId, orderedIds);
+      },
+      handleMenuOrderError(projectId, message) {
+        if (this.menuSortable) this.menuSortable.option('disabled', false);
+        const selector = document.getElementById('manageMenuProjectSelect');
+        selector.setAttribute('data-value', projectId);
+        this.invalidateData();
+        this.loadData(true);
+        Swal.fire({icon:'error',title:'Urutan belum tersimpan',text:message || 'Silakan coba kembali.'});
+      },
+      createProject() { 
+          const n=document.getElementById('newProjectName').value; 
+          if(!n) return Swal.fire({icon:'warning', title:'Required', text:'Nama Project wajib diisi'}); 
+          
+          showLoading(true); 
+          google.script.run.withSuccessHandler(()=>{showLoading(false);document.getElementById('newProjectName').value='';this.invalidateData();this.loadData(true);Swal.fire({icon:'success',title:'Created',timer:1000,showConfirmButton:false});}).createProject(n); 
+      },
+      editP(s) { const p=JSON.parse(decodeURIComponent(s)); Swal.fire({title:'Edit Project', html:`<input id="sw1" class="swal2-input" value="${p.name}"><select id="sw2" class="swal2-input"><option value="Active">Active</option><option value="Closed">Closed</option></select>`, preConfirm:()=>[document.getElementById('sw1').value,document.getElementById('sw2').value]}).then(r=>{if(r.isConfirmed){showLoading(true);google.script.run.withSuccessHandler(()=>{showLoading(false);this.invalidateData();this.loadData(true);}).editProject(p.id,r.value[0],r.value[1]);}}); },
+      
+      async downloadExcel() {
+        const pid = document.getElementById('dashProjectSelect').value;
+        const includeHidden = document.getElementById('dashIncludeHidden').checked;
+
+        if (!pid || pid === "Pilih Project...") return Swal.fire({icon:'info', text:'Silakan pilih project terlebih dahulu'});
+
+        try {
+          showLoading(true, 'Menyiapkan Excel...');
+          await loadScriptOnce('https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js', 'XLSX');
+        } catch (error) {
+          showLoading(false);
+          return Swal.fire({icon:'error', text:error.message || 'Modul Excel gagal dimuat.'});
+        }
+
+        showLoading(true, 'Sinkronasi Data...');
+        google.script.run.withSuccessHandler(d => {
+            showLoading(false);
+            if(!d || !d.rawResponses) {
+                return Swal.fire({icon:'warning', text:'Gagal sinkronasi data dari server.'});
+            }
+            this.processExcelExport(pid, includeHidden, d); 
+        }).withFailureHandler(()=>{
+            showLoading(false);
+            Swal.fire({icon:'error', text:'Gagal terhubung ke server.'});
+        }).getProjectExportData(pid, includeHidden);
+      },
+
+      processExcelExport(pid, includeHidden, exportData) {
+        const sourceData = exportData || this.data;
+        const raw = sourceData.rawResponses.filter(r => String(r[1]) === String(pid));
+        if (raw.length === 0) return Swal.fire({icon:'warning', text:'Belum ada data respons untuk project ini.'});
+
+        // Helper untuk mengubah Index Kolom ke Huruf Excel (0 = A, 1 = B, dst)
+        const getColLetter = (colIdx) => {
+            let letter = '';
+            while (colIdx >= 0) {
+                letter = String.fromCharCode((colIdx % 26) + 65) + letter;
+                colIdx = Math.floor(colIdx / 26) - 1;
+            }
+            return letter;
+        };
+
+        const borderAll = { top: { style: "thin", color: { rgb: "000000" } }, bottom: { style: "thin", color: { rgb: "000000" } }, left: { style: "thin", color: { rgb: "000000" } }, right: { style: "thin", color: { rgb: "000000" } } };
+        const styleHeader = { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1F4E78" } }, border: borderAll, alignment: { horizontal: "center", vertical: "center", wrapText: true } };
+        const styleCell = { border: borderAll, alignment: { horizontal: "center", vertical: "center" } };
+        const styleCellLeft = { border: borderAll, alignment: { horizontal: "left", vertical: "center" } };
+        
+        const styleLaunch = { font: { bold: true, color: { rgb: "006100" } }, fill: { fgColor: { rgb: "C6EFCE" } }, border: borderAll, alignment: { horizontal: "center", vertical: "center" } };
+        const styleRevisi = { font: { bold: true, color: { rgb: "9C6500" } }, fill: { fgColor: { rgb: "FFEB9C" } }, border: borderAll, alignment: { horizontal: "center", vertical: "center" } };
+        const styleDrop = { font: { bold: true, color: { rgb: "9C0006" } }, fill: { fgColor: { rgb: "FFC7CE" } }, border: borderAll, alignment: { horizontal: "center", vertical: "center" } };
+        
+        const styleTitle = { font: { bold: true, sz: 14, color: { rgb: "1F4E78" } } };
+        const styleSubTitle = { font: { bold: true, sz: 11 } };
+
+        let questionHeaders = new Set();
+        raw.forEach(r => {
+            try { JSON.parse(r[4]).forEach(a => questionHeaders.add(a.question || a.label)); } catch(e) {}
+        });
+        const dynamicHeaders = Array.from(questionHeaders);
+        
+        const headers = ["Timestamp", "Rentang Umur", "Menu Item", "Avg Raw Score", ...dynamicHeaders];
+        const styledHeaders = headers.map(h => ({ v: h, s: styleHeader }));
+
+        const rows = raw.map(r => {
+            const menu = sourceData.menus.find(m => String(m.id) === String(r[2]));
+            const mName = menu ? menu.name : "Unknown Menu";
+            let ansObj = [];
+            try { ansObj = JSON.parse(r[4]); } catch(e) {}
+            const baseRow = [r[6], r[3], mName, r[5]].map(cell => ({ v: cell, s: styleCellLeft }));
+            const answerColumns = dynamicHeaders.map(header => {
+                const found = ansObj.find(a => (a.question || a.label) === header);
+                const rawVal = found ? found.answer : "";
+                // Konversi ke number asli jika nilainya numerik, supaya rumus (AVERAGEIF, dll) tidak error di Excel
+                if (rawVal !== "" && rawVal !== null && rawVal !== undefined) {
+                    const numVal = Number(String(rawVal).trim().replace(',', '.'));
+                    if (!isNaN(numVal) && isFinite(numVal)) {
+                        return { v: numVal, t: 'n', s: styleCellLeft };
+                    }
+                }
+                return { v: rawVal, s: styleCellLeft };
+            });
+            return [...baseRow, ...answerColumns];
+        });
+
+        const wsData = [styledHeaders, ...rows];
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+        ws['!cols'] = [{wch: 20}, {wch: 15}, {wch: 25}, {wch: 15}].concat(dynamicHeaders.map(() => ({wch: 25})));
+        
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Raw Data");
+
+        const summaryData = [];
+        summaryData.push([{ v: "Referensi Skoring", s: styleTitle }]);
+        summaryData.push([]);
+        summaryData.push([ { v: "NPS Range", s: styleHeader }, { v: "Status Produk", s: styleHeader }, { v: "Action", s: styleHeader } ]);
+        summaryData.push([ { v: "< 35", s: styleCell }, { v: "Drop", s: styleDrop }, { v: "Tidak Lanjut", s: styleCellLeft } ]);
+        summaryData.push([ { v: "35 - 39", s: styleCell }, { v: "Revisi Minor", s: styleRevisi }, { v: "Beberapa yang harus di revisi", s: styleCellLeft } ]);
+        summaryData.push([ { v: ">= 40", s: styleCell }, { v: "Launch", s: styleLaunch }, { v: "Siap diluncurkan", s: styleCellLeft } ]);
+        summaryData.push([]);
+        summaryData.push([]);
+
+        const rawEndRow = raw.length + 1; // Mendapatkan baris terakhir data mentah di Sheet Raw Data
+
+        // Fungsi helper untuk melindungi (escape) karakter Wildcard Excel (*, ?, ~) 
+        const escapeExcelWildcards = (str) => String(str).replace(/~/g, '~~').replace(/\*/g, '~*').replace(/\?/g, '~?');
+
+        // ===== Persiapan Matrix Rasa vs Tampilan/Visual =====
+        // Mencari kolom pertanyaan "Rasa" dan "Tampilan"/"Visual" di Raw Data (case-insensitive)
+        const matrixRows = [];
+        const rasaHeaderIdx = dynamicHeaders.findIndex(h => String(h).toLowerCase().includes('rasa'));
+        const visualHeaderIdx = dynamicHeaders.findIndex(h => {
+            const low = String(h).toLowerCase();
+            return low.includes('tampilan') || low.includes('visual');
+        });
+        const rasaColLetterRaw = rasaHeaderIdx >= 0 ? getColLetter(rasaHeaderIdx + 4) : null;
+        const visualColLetterRaw = visualHeaderIdx >= 0 ? getColLetter(visualHeaderIdx + 4) : null;
+
+        // Agregasi skor Rasa & Tampilan/Visual LANGSUNG dari isi sheet "Raw Data" (array rows) sebagai acuan utama
+        const matrixAgg = {};
+        if (rasaHeaderIdx >= 0 || visualHeaderIdx >= 0) {
+            rows.forEach(rowCells => {
+                const menuName = rowCells[2] ? rowCells[2].v : null; // kolom ke-3 = Menu Item
+                if (!menuName) return;
+                if (!matrixAgg[menuName]) matrixAgg[menuName] = { rasaSum: 0, rasaCount: 0, visualSum: 0, visualCount: 0, totalResp: 0 };
+                matrixAgg[menuName].totalResp++;
+
+                if (rasaHeaderIdx >= 0) {
+                    const cell = rowCells[rasaHeaderIdx + 4];
+                    const val = cell ? Number(cell.v) : NaN;
+                    if (cell && cell.v !== "" && cell.v !== undefined && cell.v !== null && !isNaN(val)) {
+                        matrixAgg[menuName].rasaSum += val;
+                        matrixAgg[menuName].rasaCount++;
+                    }
+                }
+                if (visualHeaderIdx >= 0) {
+                    const cell = rowCells[visualHeaderIdx + 4];
+                    const val = cell ? Number(cell.v) : NaN;
+                    if (cell && cell.v !== "" && cell.v !== undefined && cell.v !== null && !isNaN(val)) {
+                        matrixAgg[menuName].visualSum += val;
+                        matrixAgg[menuName].visualCount++;
+                    }
+                }
+            });
+        }
+
+        sourceData.menus.forEach(m => {
+            if (String(m.projectId) !== String(pid)) return;
+            if (!includeHidden && m.status === 'Hidden') return;
+            const agg = matrixAgg[m.name];
+            matrixRows.push({
+                name: m.name,
+                rasaAvg: (agg && agg.rasaCount > 0) ? (agg.rasaSum / agg.rasaCount) : null,
+                visualAvg: (agg && agg.visualCount > 0) ? (agg.visualSum / agg.visualCount) : null
+            });
+        });
+
+        sourceData.menus.forEach(m => {
+            if(String(m.projectId) !== String(pid)) return;
+            if (!includeHidden && m.status === 'Hidden') return;
+
+            const menuRaw = raw.filter(r => String(r[2]) === String(m.id));
+            const totalResp = menuRaw.length;
+            if(totalResp === 0) return;
+
+            const categoryStats = {};
+            menuRaw.forEach(r => {
+                try {
+                    const answers = JSON.parse(r[4]);
+                    answers.forEach(a => {
+                        if((a.type === 'rating' || (!a.type && a.answer && !isNaN(a.answer) && Number(a.answer) <= 10 && Number(a.answer) >= 1)) && a.answer !== "") {
+                            const qLabel = a.question || a.label;
+                            if(!categoryStats[qLabel]) categoryStats[qLabel] = { detractors: 0, passives: 0, promoters: 0, total: 0, sum: 0 };
+                            
+                            const val = Number(a.answer);
+                            if(val >= 9) categoryStats[qLabel].promoters++;
+                            else if(val >= 7) categoryStats[qLabel].passives++;
+                            else categoryStats[qLabel].detractors++;
+                            categoryStats[qLabel].total++;
+                            categoryStats[qLabel].sum += val;
+                        }
+                    });
+                } catch(e) {}
+            });
+
+            const totalRespRow = summaryData.length + 1;
+            const menuNameRow = summaryData.length + 2;
+
+            // Menggunakan string literal pelindung agar Excel tidak salah mengira karakter ** sebagai Wildcard pencarian
+            const safeMenuNameLiteral = `"${escapeExcelWildcards(m.name).replace(/"/g, '""')}"`;
+
+            summaryData.push([ { v: "Total Responden:", s: styleSubTitle }, { v: totalResp, f: `COUNTIFS('Raw Data'!$C:$C, ${safeMenuNameLiteral})`, s: { alignment: { horizontal: "left" } } } ]);
+            summaryData.push([ { v: "Nama Produk:", s: styleSubTitle }, { v: m.name, s: { font: { bold: true, color: { rgb: "1F4E78" } } } } ]);
+            summaryData.push([]);
+            
+            summaryData.push([
+                { v: "Kategori / Atribut", s: styleHeader }, 
+                { v: "Detractors (Skor 1-6)", s: styleHeader },
+                { v: "Passives (Skor 7-8)", s: styleHeader }, 
+                { v: "Promoters (Skor 9-10)", s: styleHeader },
+                { v: "Status Evaluasi", s: styleHeader }, 
+                { v: "NPS Skor", s: styleHeader }
+            ]);
+
+            let totalNpsScore = 0;
+            let categoryCount = 0;
+            let currentRow = summaryData.length + 1;
+            const catStartRow = currentRow;
+
+            for (const [category, stats] of Object.entries(categoryStats)) {
+                if(stats.total === 0) continue;
+                
+                // Menghitung value default menggunakan JavaScript untuk mencegah 0
+                const pctDet = (stats.detractors / stats.total);
+                const pctPas = (stats.passives / stats.total);
+                const pctPro = (stats.promoters / stats.total);
+                const nps = (pctPro - pctDet) * 100; 
+                
+                if (nps !== 0) {
+                    totalNpsScore += nps;
+                    categoryCount++;
+                }
+
+                let status = "Drop"; let statusStyle = styleDrop;
+                if (nps >= 40) { status = "Launch"; statusStyle = styleLaunch; } 
+                else if (nps >= 35) { status = "Revisi Minor"; statusStyle = styleRevisi; }
+
+                const qIdx = dynamicHeaders.indexOf(category);
+                const rawColLetter = getColLetter(qIdx + 4);
+                
+                // Menyuntikkan RUMUS Excel dengan string literal yang kebal Wildcard
+                const fDet = `COUNTIFS('Raw Data'!$C:$C, ${safeMenuNameLiteral}, 'Raw Data'!$${rawColLetter}:$${rawColLetter}, ">=1", 'Raw Data'!$${rawColLetter}:$${rawColLetter}, "<=6")/$B$${totalRespRow}`;
+                const fPas = `COUNTIFS('Raw Data'!$C:$C, ${safeMenuNameLiteral}, 'Raw Data'!$${rawColLetter}:$${rawColLetter}, ">=7", 'Raw Data'!$${rawColLetter}:$${rawColLetter}, "<=8")/$B$${totalRespRow}`;
+                const fPro = `COUNTIFS('Raw Data'!$C:$C, ${safeMenuNameLiteral}, 'Raw Data'!$${rawColLetter}:$${rawColLetter}, ">=9")/$B$${totalRespRow}`;
+                const fStatus = `IF(F${currentRow}>=40, "Launch", IF(F${currentRow}>=35, "Revisi Minor", "Drop"))`;
+                const fNps = `(D${currentRow}-B${currentRow})*100`;
+
+                summaryData.push([ 
+                    { v: category, s: styleCellLeft }, 
+                    { v: pctDet, f: fDet, t: 'n', s: { ...styleCell, numFmt: "0.00%" } }, 
+                    { v: pctPas, f: fPas, t: 'n', s: { ...styleCell, numFmt: "0.00%" } }, 
+                    { v: pctPro, f: fPro, t: 'n', s: { ...styleCell, numFmt: "0.00%" } }, 
+                    { v: status, f: fStatus, s: statusStyle },
+                    { v: nps, f: fNps, t: 'n', s: { ...styleCell, numFmt: "0.00" } }
+                ]);
+                currentRow++;
+            }
+
+            let avgNpsRaw = categoryCount > 0 ? (totalNpsScore / categoryCount) : 0;
+            let avgNps = avgNpsRaw >= 0 ? Math.ceil(avgNpsRaw) : Math.floor(avgNpsRaw);
+
+            let statusAvg = "DROP (TIDAK LANJUT)"; let statusAvgStyle = styleDrop;
+            if (avgNps >= 40) { statusAvg = "LAUNCH (SIAP JUAL)"; statusAvgStyle = styleLaunch; }
+            else if (avgNps >= 35) { statusAvg = "REVISI MINOR"; statusAvgStyle = styleRevisi; }
+
+            const catEndRow = currentRow - 1;
+            const fTotalNps = `ROUNDUP(IFERROR(AVERAGEIF(F${catStartRow}:F${catEndRow}, "<>0"), 0), 0)`;
+            const fTotalStatus = `IF(F${currentRow}>=40, "LAUNCH (SIAP JUAL)", IF(F${currentRow}>=35, "REVISI MINOR", "DROP (TIDAK LANJUT)"))`;
+
+            const totalLabelStyle = { font: { bold: true }, fill: { fgColor: { rgb: "D9E1F2" } }, border: borderAll, alignment: { horizontal: "right", vertical: "center" } };
+            const totalValueStyle = { font: { bold: true, sz: 12 }, fill: { fgColor: { rgb: "D9E1F2" } }, border: borderAll, alignment: { horizontal: "center", vertical: "center" } };
+
+            summaryData.push([
+                { v: "TOTAL KESELURUHAN (Rata-rata Atribut)", s: totalLabelStyle },
+                { v: "-", s: styleCell },
+                { v: "-", s: styleCell },
+                { v: "-", s: styleCell },
+                { v: statusAvg, f: fTotalStatus, s: statusAvgStyle },
+                { v: avgNps, f: fTotalNps, t: 'n', s: { ...totalValueStyle, numFmt: "0" } }
+            ]);
+
+            summaryData.push([]);
+            summaryData.push([]);
+        });
+
+        const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+        wsSummary['!cols'] = [ {wch: 35}, {wch: 18}, {wch: 18}, {wch: 18}, {wch: 22}, {wch: 12} ];
+
+        XLSX.utils.book_append_sheet(wb, wsSummary, "Laporan Final");
+
+        // ===== SHEET BARU: Decision_Matrix (mengikuti format contoh yang disetujui) =====
+        const DM_SHEET_NAME = "Decision_Matrix";
+        const styleDmRed = { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "C00000" } }, border: borderAll, alignment: { horizontal: "center", vertical: "center", wrapText: true } };
+        const styleDmAmber = { fill: { fgColor: { rgb: "FFC000" } }, border: borderAll, alignment: { horizontal: "center", vertical: "center", wrapText: true } };
+        const styleDmPink = { fill: { fgColor: { rgb: "FCE4E3" } }, border: borderAll, alignment: { horizontal: "center", vertical: "center", wrapText: true } };
+        const styleDmGreen = { fill: { fgColor: { rgb: "92D050" } }, border: borderAll, alignment: { horizontal: "center", vertical: "center", wrapText: true } };
+        const styleDmNone = { border: borderAll, alignment: { horizontal: "center", vertical: "center", wrapText: true } };
+        const numFmtAccounting = `_-* #,##0.00_-;\\-* #,##0.00_-;_-* "-"??_-;_-@_-`;
+
+        // Helper: tentukan teks keputusan + style berdasarkan skor Rasa & Tampilan (mengikuti logika formula contoh)
+        const getDecision = (rasa, visual) => {
+            if (visual === null || rasa === null) return { text: "", style: styleDmNone };
+            if (visual < 7) return { text: "Do not launch", style: styleDmRed };
+            if (rasa < 7) return { text: "Regular product only, not for big campaign", style: styleDmPink };
+            if (rasa <= 8.5) {
+                if (visual <= 8.5) return { text: "Regular product only, not for big campaign", style: styleDmPink };
+                return { text: "Can be launched, but careful with forecast in early stage", style: styleDmNone };
+            }
+            if (visual <= 8.5) return { text: "Aggressive Forecast 1st 2 weeks - 1 month only", style: styleDmAmber };
+            return { text: "Aggressive Forecast throughout period", style: styleDmGreen };
+        };
+
+        const matrixData = [];
+
+        // -- Tabel matrix referensi (acuan visual bagi penerima report untuk membaca tabel di bawah) --
+        matrixData.push([{ v: "MATRIX KEPUTUSAN: RASA vs TAMPILAN (acuan membaca tabel di bawah)", s: styleTitle }]);
+        matrixData.push([]);
+        matrixData.push([
+            { v: "", s: styleHeader }, { v: "", s: styleHeader },
+            { v: "Rasa", s: styleHeader }, { v: "", s: styleHeader }, { v: "", s: styleHeader }
+        ]);
+        matrixData.push([
+            { v: "", s: styleHeader }, { v: "", s: styleHeader },
+            { v: "Low (score <7)", s: styleHeader },
+            { v: "Average (score 7-8.5)", s: styleHeader },
+            { v: "High (score >8.5)", s: styleHeader }
+        ]);
+        matrixData.push([
+            { v: "Tampilan", s: styleHeader }, { v: "Low (score <7)", s: styleHeader },
+            { v: "Do not launch", s: styleDmRed },
+            { v: "Regular product only, not for big campaign", s: styleDmPink },
+            { v: "Regular product only, not for big campaign", s: styleDmPink }
+        ]);
+        matrixData.push([
+            { v: "", s: styleHeader }, { v: "Average (score 7-8.5)", s: styleHeader },
+            { v: "Do not launch", s: styleDmRed },
+            { v: "Regular product only, not for big campaign", s: styleDmPink },
+            { v: "Can be launched, but careful with forecast in early stage", s: styleDmNone }
+        ]);
+        matrixData.push([
+            { v: "", s: styleHeader }, { v: "High (score >8.5)", s: styleHeader },
+            { v: "Do not launch", s: styleDmRed },
+            { v: "Aggressive Forecast 1st 2 weeks - 1 month only", s: styleDmAmber },
+            { v: "Aggressive Forecast throughout period", s: styleDmGreen }
+        ]);
+        matrixData.push([]);
+        matrixData.push([]);
+
+        // -- Tabel hasil per menu (live formula dari Raw Data) --
+        matrixData.push([
+            { v: "Menu Item", s: styleHeader },
+            { v: "Rasa (Score)", s: styleHeader },
+            { v: "Tampilan (Score)", s: styleHeader },
+            { v: "Keputusan", s: styleHeader }
+        ]);
+
+        if (!rasaColLetterRaw || !visualColLetterRaw) {
+            matrixData.push([{ v: `Pertanyaan rating yang mengandung kata "rasa" dan "tampilan"/"visual" tidak ditemukan pada project ini. Pastikan ada pertanyaan rating yang teksnya memuat kata tersebut (mis. "Bagaimana rasa dari produk ini?") agar matrix dapat dihitung.`, s: styleCellLeft }]);
+        } else if (matrixRows.length === 0) {
+            matrixData.push([{ v: "Belum ada menu pada project ini.", s: styleCellLeft }]);
+        } else {
+            matrixRows.forEach(item => {
+                const excelRow = matrixData.length + 1; // baris Excel (1-based) untuk row ini
+
+                const fRasaAvg = `AVERAGEIF('Raw Data'!$C:$C,${DM_SHEET_NAME}!$A${excelRow},'Raw Data'!${rasaColLetterRaw}:${rasaColLetterRaw})`;
+                const fVisualAvg = `AVERAGEIF('Raw Data'!$C:$C,${DM_SHEET_NAME}!$A${excelRow},'Raw Data'!${visualColLetterRaw}:${visualColLetterRaw})`;
+                const fKeputusan = `IF(C${excelRow}<7,"Do not launch",IF(B${excelRow}<7,"Regular product only, not for big campaign",IF(B${excelRow}<=8.5,IF(C${excelRow}<=8.5,"Regular product only, not for big campaign","Can be launched, but careful with forecast in early stage"),IF(C${excelRow}<=8.5,"Aggressive Forecast 1st 2 weeks - 1 month only","Aggressive Forecast throughout period"))))`;
+
+                const decision = getDecision(item.rasaAvg, item.visualAvg);
+
+                matrixData.push([
+                    { v: item.name, s: styleCellLeft },
+                    { v: item.rasaAvg !== null ? Math.round(item.rasaAvg * 100) / 100 : 0, f: fRasaAvg, t: 'n', s: { numFmt: numFmtAccounting, border: borderAll, alignment: { horizontal: "center", vertical: "center" } } },
+                    { v: item.visualAvg !== null ? Math.round(item.visualAvg * 100) / 100 : 0, f: fVisualAvg, t: 'n', s: { numFmt: numFmtAccounting, border: borderAll, alignment: { horizontal: "center", vertical: "center" } } },
+                    { v: decision.text, f: fKeputusan, s: { ...decision.style, font: { bold: true, ...(decision.style.font || {}) } } }
+                ]);
+            });
+        }
+
+        const wsMatrix = XLSX.utils.aoa_to_sheet(matrixData);
+        wsMatrix['!cols'] = [ {wch: 24.18}, {wch: 16}, {wch: 16.82}, {wch: 48}, {wch: 45} ];
+        wsMatrix['!merges'] = [
+            { s: { r: 2, c: 2 }, e: { r: 2, c: 4 } }, // header "Rasa"
+            { s: { r: 4, c: 0 }, e: { r: 6, c: 0 } }  // header "Tampilan"
+        ];
+        XLSX.utils.book_append_sheet(wb, wsMatrix, DM_SHEET_NAME);
+
+        const pSelect = document.getElementById('dashProjectSelect');
+        const pName = pSelect.options[pSelect.selectedIndex].text;
+        XLSX.writeFile(wb, `Report_${pName.replace(/[^a-z0-9]/gi, '_')}.xlsx`);
+      },
+
+      downloadPDF() {
+        const pid = document.getElementById('dashProjectSelect').value;
+        const includeHidden = document.getElementById('dashIncludeHidden').checked;
+
+        if (!pid || pid === "Pilih Project...") return Swal.fire({icon:'info', text:'Silakan pilih project terlebih dahulu'});
+        
+        showLoading(true, 'Generating PDF...');
+        google.script.run.withSuccessHandler(res => {
+            showLoading(false);
+            if(res && res.base64) {
+                const link = document.createElement('a');
+                link.href = 'data:application/pdf;base64,' + res.base64;
+                link.download = res.filename;
+                link.click();
+            } else {
+                Swal.fire({icon:'error', text:'Gagal membuat PDF'});
+            }
+        }).withFailureHandler(err => {
+            showLoading(false);
+            Swal.fire({icon:'error', title:'Error', text: err.message || 'Gagal memproses PDF.'});
+        }).generatePDFReport(pid, includeHidden);
+      },
+
+      loadStats() {
+        const pid = document.getElementById('dashProjectSelect').value; if(!pid) return;
+        const includeHidden = document.getElementById('dashIncludeHidden').checked;
+
+        showLoading(true); document.getElementById('statsPlaceholder').classList.add('hidden'); document.getElementById('statsResult').classList.remove('hidden');
+        const fmtRp = (n) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n);
+        
+        google.script.run.withSuccessHandler(response => {
+          showLoading(false);
+          const list = response.rankings || [];
+          const uniqueCount = response.totalUniquePanelists || 0;
+          let totalNPS=0;
+          let validNpsCount = 0;
+          
+          list.forEach(i => {
+              if (i.nps !== 0) { 
+                  totalNPS += i.nps;
+                  validNpsCount++;
+              }
+          });
+          
+          let avgKpiNpsRaw = validNpsCount > 0 ? (totalNPS / validNpsCount) : 0;
+          let avgKpiNps = avgKpiNpsRaw >= 0 ? Math.ceil(avgKpiNpsRaw) : Math.floor(avgKpiNpsRaw);
+
+          document.getElementById('kpiTotal').innerText = uniqueCount; 
+          document.getElementById('kpiNps').innerText = avgKpiNps;
+          document.getElementById('kpiBest').innerText = list.length ? list[0].name : '-';
+          
+          if(window.myChart) window.myChart.destroy();
+          window.myChart = new Chart(document.getElementById('npsChart'), {
+            type:'bar', 
+            data:{
+              labels:list.map(i=>i.name), 
+              datasets:[{
+                label:'NPS', 
+                data:list.map(i=>i.nps.toFixed(2)), 
+                backgroundColor: list.map(i => {
+                    if (i.nps >= 40) return '#2596BE'; 
+                    if (i.nps >= 35) return '#facc15'; 
+                    return '#f87171'; 
+                }), 
+                borderRadius:8, 
+                barThickness: 40 
+              }]
+            }, 
+            options:{
+              responsive:true, 
+              maintainAspectRatio: false,
+              plugins:{
+                legend:{display:false},
+                datalabels: { anchor: 'end', align: 'top', color: '#94a3b8', font: { weight: 'bold', size: 11 }, formatter: function(value) { return value; } }
+              }, 
+              scales:{
+                y:{ beginAtZero:true, max:100, min:-100, grid:{color:'#f1f5f9', borderDash: [5, 5]}, ticks: { color: '#cbd5e1', font: {size: 10} }, border: {display: false} }, 
+                x:{ grid:{display:false}, ticks: { color: '#64748b', font: {size: 11, weight: 'bold'} } }
+              }
+            }
+          });
+          
+          const div = document.getElementById('rankingList'); div.innerHTML='';
+          list.forEach((i, idx) => {
+             let kwHtml = ''; i.keywords.forEach(k => kwHtml+=`<span class="text-[10px] bg-slate-50 text-slate-600 px-2.5 py-1 rounded-lg border border-slate-100 font-medium">${k.word} <b class="text-brand-600 ml-1">${k.count}</b></span>`);
+             const topWords = i.keywords ? i.keywords.slice(0, 3).map(k => k.word) : [];
+             let smartSummary = "";
+             
+             if (i.comments.length === 0) { 
+                 smartSummary = "Belum ada ulasan yang cukup."; 
+             } else {
+                 const wStr = topWords.length > 1 ? topWords.slice(0, -1).join(', ') + ' dan ' + topWords.slice(-1) : (topWords[0] || 'aspek umum');
+                 if (i.nps >= 40) { smartSummary = `Menu siap Launch! Panelis sangat menyukai kualitas ${wStr}.`; } 
+                 else if (i.nps >= 35) { smartSummary = `Menu butuh Revisi Minor, terutama perhatikan aspek ${wStr}.`; } 
+                 else { smartSummary = `Menu direkomendasikan untuk Drop. Evaluasi utama pada masalah ${wStr}.`; }
+                 
+                 if(topWords.length === 0) smartSummary = i.nps >= 40 ? "Menu dinilai sangat baik (Launch)." : (i.nps >= 35 ? "Menu butuh sedikit perbaikan (Revisi Minor)." : "Menu kurang diminati (Drop).");
+             }
+
+             let domAge = i.dominantPanelistGroup || "N/A";
+             let ageHtml = domAge !== "N/A" ? `<div class="mt-2 flex items-center gap-2 text-[10px] font-bold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg w-fit border border-slate-100 shadow-sm"><i class="fas fa-users text-brand-400"></i> Most Popular: <span class="text-slate-700">${domAge} Tahun</span></div>` : '';
+
+             let insightHtml = smartSummary ? `<div class="mt-5 mb-3 bg-gradient-to-r from-brand-50 to-white p-5 rounded-2xl border border-brand-100 flex gap-4 items-start shadow-sm"><div class="mt-0.5 text-brand-500 bg-white rounded-full w-6 h-6 flex items-center justify-center shadow-sm text-xs"><i class="fas fa-magic"></i></div><div><p class="text-[10px] font-bold text-brand-800 uppercase tracking-widest mb-1.5">Kesimpulan</p><p class="text-sm text-slate-700 leading-relaxed font-medium">"${smartSummary}"</p></div></div>` : `<div class="mt-4 mb-2 p-4 rounded-xl border border-slate-100 text-xs text-slate-400 italic text-center">Belum cukup data.</div>`;
+             let priceHtml = i.avgPrice > 0 ? `<div class="mt-4 flex flex-wrap gap-3 text-xs"><div class="bg-white px-4 py-3 rounded-xl border border-slate-100 shadow-sm flex-1 min-w-[140px]"><span class="block text-slate-400 font-bold uppercase text-[9px] mb-1"><i class="fas fa-tag mr-1.5"></i>Ekspektasi User</span><span class="font-serif font-bold text-slate-800 text-base">${fmtRp(i.avgPrice)}</span></div><div class="bg-emerald-50 px-4 py-3 rounded-xl border border-emerald-100 shadow-sm flex-1 min-w-[140px]"><span class="block text-emerald-700 font-bold uppercase text-[9px] mb-1"><i class="fas fa-chart-line mr-1.5"></i>Potensi Jual (+20%)</span><span class="font-serif font-bold text-emerald-800 text-base">${fmtRp(i.suggestedPrice)}</span></div></div>` : '';
+             let comHtml = i.comments.length ? `<details class="group mt-4"><summary class="text-[10px] font-bold text-slate-400 uppercase cursor-pointer list-none flex items-center gap-2 hover:text-slate-600 transition bg-slate-50 inline-flex px-3 py-1.5 rounded-lg"><span>Lihat ${i.comments.length} Komentar</span> <i class="fas fa-chevron-down group-open:rotate-180 transition ml-auto"></i></summary><ul class="mt-3 space-y-3 bg-slate-50/50 p-4 rounded-2xl max-h-40 overflow-y-auto border border-slate-100">${i.comments.map(c=>`<li class="text-xs text-slate-600 border-b border-slate-200/50 last:border-0 pb-2 italic leading-relaxed">"${c}"</li>`).join('')}</ul></details>` : '';
+             
+             let npsBadge = i.nps >= 40 ? 'bg-green-50 text-green-700 border border-green-100' : (i.nps >= 35 ? 'bg-yellow-50 text-yellow-700 border border-yellow-100' : 'bg-red-50 text-red-700 border border-red-100');
+
+             div.innerHTML += `<div class="bg-white border border-slate-200 p-6 md:p-8 rounded-[2rem] shadow-sm hover:shadow-md hover:-translate-y-1 group transition-all duration-300"><div class="flex justify-between items-start mb-4"><div class="flex items-center gap-5"><div class="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-serif font-bold text-lg shadow-lg shadow-slate-900/20 group-hover:bg-brand-600 group-hover:shadow-brand-500/30 transition duration-500">#${idx+1}</div><div><h4 class="font-bold text-slate-800 text-lg">${i.name}</h4><p class="text-[10px] text-slate-400 font-bold uppercase tracking-wide mt-0.5">${i.count} Panelis</p>${ageHtml}</div></div><div class="text-right"><span class="inline-block text-sm font-bold px-4 py-1.5 rounded-lg ${npsBadge}">${i.nps.toFixed(2)} NPS</span><div class="flex gap-2 justify-end mt-2 text-[9px] font-mono font-medium opacity-60" title="Total akumulasi Promoters, Passives, Detractors dari semua kategori"><span class="text-green-700 bg-green-50 px-1.5 py-0.5 rounded">P:${i.promoters}</span><span class="text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded">Pa:${i.passives}</span><span class="text-red-600 bg-red-50 px-1.5 py-0.5 rounded">D:${i.detractors}</span></div></div></div>${insightHtml}${priceHtml}<div class="flex flex-wrap gap-2 mb-2 mt-4 opacity-70 hover:opacity-100 transition">${kwHtml}</div>${comHtml}</div>`;
+          });
+        }).calculateDetailedStats(pid, includeHidden);
+      },
+      
+      handleFileSelect(input) {
+         if (input.files && input.files[0]) {
+             const reader = new FileReader();
+             reader.onload = (e) => {
+                 document.getElementById('menuImgPreview').src = e.target.result;
+                 document.getElementById('uploadPlaceholder').classList.add('hidden');
+                 document.getElementById('imagePreviewContainer').classList.remove('hidden');
+                 document.getElementById('fileName').innerText = input.files[0].name;
+             };
+             reader.readAsDataURL(input.files[0]);
+         }
+      },
+
+      resetMenuForm() { 
+          document.getElementById('isEditMode').value='false'; 
+          document.getElementById('menuProjectSelect').disabled = false; 
+          document.getElementById('menuName').disabled = false; 
+          document.getElementById('menuDesc').disabled = false; 
+          
+          document.getElementById('formMenuTitle').innerText='Buat Menu Baru'; 
+          document.getElementById('btnSaveMenu').innerText='Simpan Database Menu'; 
+          document.getElementById('btnSaveMenu').classList.remove('hidden'); 
+          document.getElementById('btnResetMenu').classList.remove('hidden'); 
+          document.getElementById('btnBackToManage').classList.add('hidden'); 
+
+          document.getElementById('questionActions').classList.remove('hidden'); 
+          document.getElementById('photoUploadContainer').classList.remove('opacity-50', 'pointer-events-none'); 
+          
+          document.getElementById('questionsWrapper').classList.remove('hidden');
+          document.getElementById('npsWrapper').classList.add('hidden');
+
+          document.getElementById('menuName').value=''; 
+          document.getElementById('menuDesc').value=''; 
+          document.getElementById('menuFile').value=''; 
+          document.getElementById('fileName').innerText='Upload Foto (JPG)'; 
+
+          document.getElementById('menuStatusSelect').value='Active';
+          document.getElementById('menuStatusSelect').disabled = false;
+          
+          document.getElementById('menuProjectSelect').removeAttribute('data-value');
+          document.getElementById('menuProjectSelect').value = '';
+
+          document.getElementById('menuImgPreview').src = '';
+          document.getElementById('uploadPlaceholder').classList.remove('hidden');
+          document.getElementById('imagePreviewContainer').classList.add('hidden');
+
+          document.getElementById('questionsContainer').innerHTML=''; 
+          document.getElementById('editPhotoNote').classList.add('hidden'); 
+      },
+      addQ(type, label='', options='') { 
+        const container = document.getElementById('questionsContainer');
+        const div = document.createElement('div');
+        div.className = "flex flex-col gap-2 mb-3 bg-white p-3 rounded-xl border border-slate-100 shadow-sm animate-fade-in";
+        const isReadOnly = document.getElementById('btnSaveMenu').classList.contains('hidden');
+        const disabledAttr = isReadOnly ? 'disabled' : '';
+        const removeBtn = isReadOnly ? '' : `<button onclick="this.closest('.flex-col').remove()" class="w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition flex items-center justify-center text-xs"><i class="fas fa-times"></i></button>`;
+
+        let extra = '';
+        if(type === 'options') {
+            extra = `<input class="w-full border-0 bg-slate-50 rounded-lg px-3 py-2 text-xs q-options outline-none focus:ring-2 focus:ring-brand-500/20 text-slate-600 mt-2" placeholder="Pilihan (pisahkan dengan koma, cth: Manis, Asin, Pahit)" value="${options}" ${disabledAttr}>`;
+        }
+
+        div.innerHTML = `
+        <div class="flex gap-3 items-center">
+             <span class="text-[10px] font-bold uppercase w-12 text-slate-400 text-center tracking-wider">${type}</span>
+             <input class="flex-1 border-0 bg-slate-50 rounded-lg px-3 py-2 text-sm q-label outline-none focus:ring-2 focus:ring-brand-500/20 text-slate-700 font medium" placeholder="Label Pertanyaan..." value="${label}" ${disabledAttr}>
+             <input type="hidden" class="q-type" value="${type}">
+             ${removeBtn}
+        </div>
+        ${extra}`;
+        container.appendChild(div);
+      },
+      compressImage(f,cb){const r=new FileReader();r.readAsDataURL(f);r.onload=e=>{const i=new Image();i.src=e.target.result;i.onload=()=>{const c=document.createElement('canvas');let w=i.width,h=i.height;if(w>800){h=Math.round(h*(800/w));w=800;}c.width=w;c.height=h;c.getContext('2d').drawImage(i,0,0,w,h);cb(c.toDataURL('image/jpeg',0.6).split(',')[1]);}}},
+      saveMenu(){
+        const isEdit=document.getElementById('isEditMode').value==='true', id=document.getElementById('editMenuId').value, pid=document.getElementById('menuProjectSelect').value, name=document.getElementById('menuName').value, desc=document.getElementById('menuDesc').value, file=document.getElementById('menuFile').files[0];
+        const status = document.getElementById('menuStatusSelect').value;
+
+        let qs=[]; 
+        document.querySelectorAll('.q-type').forEach(e => {
+            const row = e.closest('.flex-col'); 
+            const label = row.querySelector('.q-label').value;
+            const optInput = row.querySelector('.q-options');
+            const options = optInput ? optInput.value : '';
+            qs.push({type: e.value, label: label, options: options});
+        });
+        if(!pid||!name||!qs.length) return Swal.fire('Data Tidak Lengkap');
+        const send=(b64)=>{
+           const d = b64?{data:b64, mimeType:'image/jpeg'}:null; showLoading(true,'Saving...');
+           const h = google.script.run.withSuccessHandler(result=>{
+             showLoading(false);
+             if (result && result.success === false) return Swal.fire({icon:'error', title:'Gagal', text:result.message || 'Data tidak dapat disimpan.'});
+             this.invalidateData();
+             Swal.fire({icon:'success',title:'Saved',showConfirmButton:false,timer:1000});
+             this.resetMenuForm();
+             if(isEdit){
+               const manageProject = document.getElementById('manageMenuProjectSelect');
+               manageProject.setAttribute('data-value', pid);
+               manageProject.value = pid;
+               this.switchTab('manage');
+             }
+           }).withFailureHandler(error=>{
+             showLoading(false);
+             Swal.fire({icon:'error',title:'Gagal Menyimpan',text:error.message || 'Silakan coba kembali.'});
+           });
+           isEdit?h.editMenu(id,pid,name,desc,d,qs,status):h.addMenu(pid,name,desc,d,qs,status);
+        };
+        file?this.compressImage(file,send):send(null);
+      },
+      
+      _populateForm(m) {
+          document.getElementById('editMenuId').value=m.id;
+          document.getElementById('menuName').value=m.name;
+          document.getElementById('menuDesc').value=m.desc;
+          document.getElementById('menuStatusSelect').value = m.status || 'Active';
+
+          const sel=document.getElementById('menuProjectSelect');
+          sel.setAttribute('data-value', m.projectId);
+          sel.value=m.projectId;
+          if(!sel.value && m.projectId){
+             const o=document.createElement('option'); o.value=m.projectId; o.text='Current (Hidden)'; o.selected=true; sel.add(o);
+          }
+          
+          if (m.fotoId) {
+              const url = `https://drive.google.com/thumbnail?id=${m.fotoId}&sz=w800`;
+              document.getElementById('menuImgPreview').src = url;
+              document.getElementById('uploadPlaceholder').classList.add('hidden');
+              document.getElementById('imagePreviewContainer').classList.remove('hidden');
+          } else {
+              document.getElementById('menuImgPreview').src = '';
+              document.getElementById('uploadPlaceholder').classList.remove('hidden');
+              document.getElementById('imagePreviewContainer').classList.add('hidden');
+          }
+
+          document.getElementById('questionsContainer').innerHTML='';
+          (typeof m.questions==='string'?JSON.parse(m.questions):m.questions).forEach(q=>{
+              this.addQ(q.type, q.label, q.options);
+          });
+          this.switchTab('menu');
+      },
+
+      viewM(s) {
+          const m=JSON.parse(decodeURIComponent(s));
+          document.getElementById('isEditMode').value='false';
+          document.getElementById('formMenuTitle').innerText='View Menu Details';
+          
+          document.getElementById('btnSaveMenu').classList.add('hidden');
+          document.getElementById('btnResetMenu').classList.add('hidden');
+          document.getElementById('btnBackToManage').classList.remove('hidden');
+
+          document.getElementById('menuProjectSelect').disabled = true;
+          document.getElementById('menuName').disabled = true;
+          document.getElementById('menuDesc').disabled = true;
+          document.getElementById('menuStatusSelect').disabled = true;
+          document.getElementById('questionActions').classList.add('hidden');
+          document.getElementById('photoUploadContainer').classList.add('opacity-50', 'pointer-events-none');
+          document.getElementById('editPhotoNote').classList.add('hidden');
+
+          document.getElementById('questionsWrapper').classList.add('hidden');
+          document.getElementById('npsWrapper').classList.remove('hidden');
+
+          this._populateForm(m);
+
+          document.getElementById('viewNpsScore').innerText = '...';
+          document.getElementById('viewNpsPromoters').innerText = 'Prom: ...';
+          document.getElementById('viewNpsPassives').innerText = 'Pass: ...';
+          document.getElementById('viewNpsDetractors').innerText = 'Detr: ...';
+          document.getElementById('viewNpsTotal').innerText = 'Memuat hasil...';
+
+          google.script.run.withSuccessHandler(stats => {
+              const avgNps = Number(stats.nps || 0);
+              document.getElementById('viewNpsScore').innerText = avgNps;
+              document.getElementById('viewNpsScore').className = `mb-2 text-6xl font-serif font-bold ${avgNps>=40 ? 'text-brand-600' : (avgNps>=35 ? 'text-yellow-500' : 'text-red-500')}`;
+              document.getElementById('viewNpsPromoters').innerText = `Prom: ${stats.promoters || 0}`;
+              document.getElementById('viewNpsPassives').innerText = `Pass: ${stats.passives || 0}`;
+              document.getElementById('viewNpsDetractors').innerText = `Detr: ${stats.detractors || 0}`;
+              document.getElementById('viewNpsTotal').innerText = `Total Responden: ${stats.responseCount || 0}`;
+          }).withFailureHandler(() => {
+              document.getElementById('viewNpsTotal').innerText = 'Gagal memuat hasil';
+          }).getMenuNpsDetails(m.id);
+      },
+
+      copyM(s) {
+          const m = JSON.parse(decodeURIComponent(s));
+          this.resetMenuForm(); 
+          
+          document.getElementById('formMenuTitle').innerText = 'Copy Menu';
+          document.getElementById('isEditMode').value = 'false'; 
+          
+          document.getElementById('menuName').value = m.name + ' (Copy)';
+          document.getElementById('menuDesc').value = m.desc;
+          
+          const sel = document.getElementById('menuProjectSelect');
+          sel.setAttribute('data-value', m.projectId); 
+          sel.value = m.projectId;
+          if(!sel.value){
+             const o=document.createElement('option'); o.value=m.projectId; o.text='Current'; o.selected=true; sel.add(o);
+          }
+          
+          const qs = typeof m.questions === 'string' ? JSON.parse(m.questions) : m.questions;
+          document.getElementById('questionsContainer').innerHTML = ''; 
+          qs.forEach(q => { this.addQ(q.type, q.label, q.options); });
+          
+          this.switchTab('menu');
+          
+          Swal.fire({
+              icon: 'info', title: 'Menu Duplicated', text: 'Silakan sesuaikan nama dan detail sebelum menyimpan sebagai menu baru.', timer: 2000, showConfirmButton: false
+          });
+      },
+
+      editM(s){
+          const m=JSON.parse(decodeURIComponent(s));
+          document.getElementById('isEditMode').value='true';
+          document.getElementById('formMenuTitle').innerText='Edit Menu';
+          
+          document.getElementById('btnSaveMenu').innerText='Update Menu';
+          document.getElementById('btnSaveMenu').classList.remove('hidden');
+          document.getElementById('btnBackToManage').classList.remove('hidden');
+          document.getElementById('btnResetMenu').classList.add('hidden');
+
+          document.getElementById('menuProjectSelect').disabled = false;
+          document.getElementById('menuName').disabled = false;
+          document.getElementById('menuDesc').disabled = false;
+          document.getElementById('menuStatusSelect').disabled = false;
+          document.getElementById('questionActions').classList.remove('hidden');
+          document.getElementById('photoUploadContainer').classList.remove('opacity-50', 'pointer-events-none');
+          document.getElementById('editPhotoNote').classList.remove('hidden');
+
+          document.getElementById('questionsWrapper').classList.remove('hidden');
+          document.getElementById('npsWrapper').classList.add('hidden');
+
+          this._populateForm(m);
+      }
+    };
+
+    const Panelist = {
+      menuList: [], currentMenuIdx: 0, currentMenu: null,
+      answers: {}, name: '', pid: '', id: '', sessionKey: '', isSubmitting: false,
+
+      start() {
+        const name = document.getElementById('panelistName').value;
+        const pid = document.getElementById('panelistProjectSelect').value;
+        if(!name || !pid || pid === "") return Swal.fire({icon:'warning', title:'Required', text:'Rentang Umur & Project wajib diisi'});
+        
+        this.name = name; this.pid = pid;
+        this.sessionKey = `food_test_panelist_${pid}_${name}`;
+        this.id = sessionStorage.getItem(this.sessionKey) || ('USR-' + Date.now() + '-' + Math.floor(Math.random() * 100000));
+        sessionStorage.setItem(this.sessionKey, this.id);
+
+        showLoading(true, 'Preparing Menu...');
+        document.getElementById('panelistInfo').innerText = name;
+        
+        google.script.run.withSuccessHandler(menus => {
+          showLoading(false); this.menuList = menus; this.renderMenuGrid(); Navigation.show('panelist-menu');
+        }).withFailureHandler(() => {
+            showLoading(false); Swal.fire({icon:'error', title:'Error', text:'Gagal memuat menu. Silakan coba lagi.'});
+        }).getMenusForProject(pid, this.id);
+      },
+
+      renderMenuGrid() {
+        const grid = document.getElementById('menuGrid'); grid.innerHTML = '';
+
+        if (this.menuList.length > 0 && this.menuList.every(m => m.submitted)) {
+           if (this.sessionKey) sessionStorage.removeItem(this.sessionKey);
+           grid.innerHTML = `
+             <div class="bg-white/80 backdrop-blur-xl p-10 rounded-[2.5rem] text-center border border-white shadow-soft animate-slide-up">
+                <div class="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-green-100">
+                  <i class="fas fa-check text-4xl text-green-600 animate-bounce"></i>
+                </div>
+                <h3 class="font-serif text-3xl font-bold text-slate-800 mb-2">All Done!</h3>
+                <p class="text-slate-500 text-sm mb-10 leading-relaxed px-4">Terima kasih atas kontribusi Anda. Semua menu dalam sesi ini telah berhasil dinilai.</p>
+                <button onclick="Navigation.goHome()" class="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-black transition transform active:scale-95 text-sm uppercase tracking-widest">
+                  Kembali ke Utama
+                </button>
+             </div>
+           `;
+           confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 } });
+           return;
+        }
+
+        if (this.menuList.length === 0) {
+           grid.innerHTML = '<div class="text-center text-slate-400 p-12 border border-dashed border-slate-200 rounded-[2rem] bg-slate-50/50"><i class="fas fa-box-open text-3xl mb-4 opacity-30"></i><p>Belum ada menu di project ini.</p></div>';
+           return;
+        }
+
+        this.menuList.forEach((m, idx) => {
+          const isSubmitted = m.submitted === true;
+          const cardClass = isSubmitted ? "grayscale opacity-60 cursor-not-allowed bg-slate-50" : "bg-white hover-float cursor-pointer hover:border-brand-200";
+          const btnText = isSubmitted ? `<span class="text-green-600 font-bold flex items-center gap-1.5"><i class="fas fa-check-circle"></i> COMPLETED</span>` : `<span class="text-brand-600 font-bold flex items-center gap-1 group-hover:translate-x-2 transition-transform">RATE NOW <i class="fas fa-arrow-right"></i></span>`;
+          const clickAction = isSubmitted ? "" : `onclick="Panelist.initForm(${idx})"`;
+
+          grid.innerHTML += `
+            <div ${clickAction} class="rounded-[2rem] p-4 shadow-soft border border-white/60 flex gap-5 transition group relative overflow-hidden ${cardClass}">
+              <div class="w-28 h-28 bg-slate-100 rounded-2xl overflow-hidden shrink-0 shadow-inner relative">
+                <img src="${m.image||'https://placehold.co/200'}" loading="lazy" decoding="async" class="w-full h-full object-cover">
+                ${!isSubmitted ? '<div class="absolute inset-0 bg-black/5 group-hover:bg-transparent transition"></div>' : ''}
+              </div>
+              <div class="flex-1 py-1 flex flex-col justify-center min-w-0">
+                <h3 class="font-serif font-bold text-xl text-slate-800 leading-tight truncate">${m.name}</h3>
+                <p class="text-xs text-slate-400 line-clamp-2 mt-1.5 leading-relaxed">${m.desc}</p>
+                <div class="mt-auto pt-3 text-[10px] tracking-widest block">${btnText}</div>
+              </div>
+            </div>`;
+        });
+      },
+
+      initForm(idx) {
+        this.currentMenuIdx = idx;
+        this.currentMenu = this.menuList[idx];
+        this.questions = typeof this.currentMenu.questions === 'string' ? JSON.parse(this.currentMenu.questions) : this.currentMenu.questions;
+
+        document.getElementById('formMenuName').innerText = this.currentMenu.name;
+        document.getElementById('formMenuDesc').innerText = this.currentMenu.desc;
+        const img = this.currentMenu.image || 'https://placehold.co/600';
+        document.getElementById('formMenuImg').src = img;
+        document.getElementById('formMenuImgBg').src = img;
+        
+        Navigation.show('panelist-form');
+        this.renderAllQuestions();
+      },
+
+      renderAllQuestions() {
+        const container = document.getElementById('questionsList');
+        container.innerHTML = '';
+
+        this.questions.forEach((q, idx) => {
+            container.innerHTML += `
+            <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-soft animate-slide-up" style="animation-delay: ${idx * 0.1}s">
+                <div class="flex items-center gap-4 mb-8">
+                  <span class="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-sm shadow-lg shadow-slate-900/20">${idx + 1}</span>
+                  <label class="block text-sm font-bold text-slate-800 tracking-wide uppercase">
+                     ${q.label}
+                  </label>
+                </div>
+                ${this.getInputHTML(q, idx)}
+            </div>`;
+        });
+      },
+
+      getInputHTML(q, idx) {
+        if(q.type === 'rating') {
+            return `
+              <div class="py-2">
+                <div class="flex justify-between items-end mb-8 px-2">
+                   <div class="text-center group">
+                      <div class="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-2 group-hover:text-slate-400 transition">Poor</div>
+                      <i class="fas fa-frown text-slate-200 text-2xl group-hover:text-red-400 transition transform group-hover:scale-110"></i>
+                   </div>
+                   <div class="text-6xl font-serif font-bold text-slate-800 drop-shadow-sm transition-all" id="disp-${idx}">5</div>
+                   <div class="text-center group">
+                      <div class="text-[10px] font-bold text-slate-300 uppercase tracking-widest mb-2 group-hover:text-slate-400 transition">Perfect</div>
+                      <i class="fas fa-smile text-slate-200 text-2xl group-hover:text-brand-500 transition transform group-hover:scale-110"></i>
+                   </div>
+                </div>
+                <div class="px-2 pb-4">
+                   <input type="range" id="input-${idx}" min="1" max="10" value="5" class="w-full" oninput="document.getElementById('disp-${idx}').innerText = this.value">
+                </div>
+                <div class="flex justify-between text-[10px] text-slate-300 font-bold px-2">
+                   <span>1</span><span>5</span><span>10</span>
+                </div>
+              </div>`;
+        } else if (q.type === 'currency') {
+            return `
+              <div class="relative group">
+                <span class="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 font-serif text-xl font-bold italic group-focus-within:text-brand-600 transition">Rp</span>
+                <input type="number" id="input-${idx}" class="input-premium w-full pl-16 pr-6 py-6 rounded-2xl text-2xl font-bold text-slate-800 placeholder-slate-200 outline-none" placeholder="0">
+              </div>`;
+        } else if (q.type === 'options') {
+            const opts = q.options ? q.options.split(',') : ['Ya', 'Tidak'];
+            let html = `<div class="grid grid-cols-1 gap-3">`;
+            html += `<input type="hidden" id="input-${idx}">`; 
+            opts.forEach(opt => {
+                opt = opt.trim();
+                html += `
+                <label class="relative flex items-center gap-4 p-4 border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-50 hover:border-brand-300 transition group bg-white shadow-sm">
+                    <input type="radio" name="radio-${idx}" value="${opt}" onchange="document.getElementById('input-${idx}').value = this.value; document.querySelectorAll('.radio-group-${idx}').forEach(el=>el.classList.remove('ring-2','ring-brand-500')); this.parentElement.classList.add('ring-2','ring-brand-500');" class="peer sr-only">
+                    <div class="w-6 h-6 rounded-full border-2 border-slate-300 peer-checked:border-brand-500 peer-checked:bg-brand-500 transition flex items-center justify-center">
+                        <div class="w-2.5 h-2.5 rounded-full bg-white opacity-0 peer-checked:opacity-100 transition"></div>
+                    </div>
+                    <span class="text-slate-700 font-bold text-sm peer-checked:text-slate-900">${opt}</span>
+                    <div class="absolute inset-0 rounded-2xl radio-group-${idx} pointer-events-none transition"></div>
+                </label>`;
+            });
+            html += `</div>`;
+            return html;
+        } else {
+            return `
+              <textarea id="input-${idx}" class="input-premium w-full h-40 p-6 rounded-2xl text-base text-slate-700 placeholder-slate-300 outline-none resize-none leading-relaxed" placeholder="Bagikan pendapat jujur anda..."></textarea>`;
+        }
+      },
+
+      submitForm() {
+        if (this.isSubmitting) return;
+        const answers = [];
+        let isComplete = true; 
+
+        for (let i = 0; i < this.questions.length; i++) {
+            const el = document.getElementById(`input-${i}`);
+            const val = el.value;
+            
+            if (!val || (typeof val === 'string' && val.trim() === '')) {
+                isComplete = false;
+                if (this.questions[i].type === 'options') {
+                   el.parentElement.classList.add('ring-2', 'ring-red-300', 'bg-red-50', 'rounded-2xl');
+                   const radios = document.getElementsByName(`radio-${i}`);
+                   radios.forEach(r => r.addEventListener('change', () => { el.parentElement.classList.remove('ring-2', 'ring-red-300', 'bg-red-50'); }, {once:true}));
+                } else {
+                   el.classList.add('border-red-400', 'bg-red-50', 'placeholder-red-300');
+                   el.addEventListener('input', function() { this.classList.remove('border-red-400', 'bg-red-50', 'placeholder-red-300'); }, {once: true});
+                }
+            }
+            answers.push({ question: this.questions[i].label, type: this.questions[i].type, answer: val });
+        }
+
+        if (!isComplete) {
+            const firstError = document.querySelector('.border-red-400, .ring-red-300');
+            if(firstError) firstError.scrollIntoView({behavior: 'smooth', block: 'center'});
+            return Swal.fire({ icon: 'warning', title: 'Belum Lengkap!', text: 'Harap isi semua pertanyaan yang ditandai merah sebelum mengirim.', confirmButtonColor: '#0f172a' });
+        }
+
+        this.finish(answers);
+      },
+
+      finish(finalAnswers) {
+        if (this.isSubmitting) return;
+        this.isSubmitting = true;
+        const submitButton = document.getElementById('panelistSubmitButton');
+        if (submitButton) submitButton.disabled = true;
+        showLoading(true, 'Sending Feedback...');
+        google.script.run.withSuccessHandler((result) => {
+            this.isSubmitting = false;
+            if (submitButton) submitButton.disabled = false;
+            showLoading(false);
+            if (this.menuList[this.currentMenuIdx]) this.menuList[this.currentMenuIdx].submitted = true;
+            this.renderMenuGrid();
+           confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#2596BE', '#C3002F', '#fcd34d'] });
+            Swal.fire({
+                title: 'Tasting Complete!', text: 'Terima kasih atas penilaian profesional Anda.', icon: 'success', confirmButtonText: 'Review Next Menu', confirmButtonColor: '#0f172a', backdrop: `rgba(255,255,255,0.9)`
+            }).then(() => { Navigation.backToMenu(); });
+        }).withFailureHandler(error => {
+            this.isSubmitting = false;
+            if (submitButton) submitButton.disabled = false;
+            showLoading(false);
+            Swal.fire({icon:'error', title:'Gagal Mengirim', text:error.message || 'Silakan coba kembali.'});
+        }).submitResponse({ projectId: this.pid, menuId: this.currentMenu.id, panelistName: this.name, answers: finalAnswers, panelistId: this.id }); 
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => { 
+        document.getElementById('view-landing').classList.remove('hidden'); 
+        Navigation.initHistory();
+        
+        const quotes = [
+            { t: "Makanan yang baik adalah fondasi dari <span class='italic text-brand-600'>kebahagiaan</span> sejati.", a: "Auguste Escoffier" },
+            { t: "Resep tidak punya jiwa. Andalah sebagai koki yang harus memberinya <span class='italic text-brand-600'>kehidupan</span>.", a: "Thomas Keller" },
+            { t: "Memasak adalah seni, namun semua seni membutuhkan pengetahuan tentang <span class='italic text-brand-600'>teknik</span>.", a: "Nathan Myhrvold" },
+            { t: "Satu-satunya hambatan nyata adalah ketakutan akan kegagalan. Dalam memasak, Anda harus memiliki sikap <span class='italic text-brand-600'>percaya diri</span>.", a: "Julia Child" },
+            { t: "Pertama kita makan, baru kemudian kita melakukan <span class='italic text-brand-600'>segalanya</span>.", a: "M.F.K. Fisher" },
+            { t: "Tawa terdengar paling renyah di tempat di mana <span class='italic text-brand-600'>makanan</span> tersaji paling lezat.", a: "Peribahasa Irlandia" },
+            { t: "Makan adalah kebutuhan, tetapi makan dengan <span class='italic text-brand-600'>cerdas</span> adalah seni.", a: "La Rochefoucauld" },
+            { t: "Dapur profesional adalah lingkungan keras yang membentuk <span class='italic text-brand-600'>karakter</span> yang sangat kuat.", a: "Gordon Ramsay" },
+            { t: "Tak ada cinta yang lebih tulus daripada cinta pada <span class='italic text-brand-600'>makanan</span>.", a: "George Bernard Shaw" },
+            { t: "Seseorang tidak dapat berpikir, mencintai, dan tidur dengan baik jika belum <span class='italic text-brand-600'>makan</span> dengan baik.", a: "Virginia Woolf" }
+        ];
+        
+        const idx = new Date().getDate() % quotes.length;
+        const q = quotes[idx];
+
+        document.getElementById('landingQuote').innerHTML = `
+            ${q.t}
+            <span class="block mt-6 text-sm font-sans font-bold tracking-[0.2em] text-slate-400 uppercase">— ${q.a}</span>
+        `;
+    });
+  </script>
+</body>
+</html>
