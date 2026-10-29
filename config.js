@@ -4,5 +4,5 @@
  * harus berakhiran /exec.
  */
 window.APP_CONFIG = {
-  API_URL: 'PASTE_APPS_SCRIPT_WEB_APP_EXEC_URL_HERE'
+  API_URL: 'https://script.google.com/macros/s/AKfycbxWzL6RXb9BpjvaF7mOiWYtn2GFWECqh8cnbrieO59cW_HGi8-b8-Ms5TRwySzrG9cz7w/exec'
 };
